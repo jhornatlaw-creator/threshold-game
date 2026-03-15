@@ -61,15 +61,15 @@
         "speed_kts": 200,
         "is_airborne": true,
         "altitude_ft": 1500,
-        "waypoints": [[-10, 0], [5, -15], [-5, -25], [-15, -10], [-20, 15]]
+        "waypoints": [[-20, 0], [-10, -20], [-30, -30], [-45, -15], [-30, 10]]
     },
     {
       "id": "ENEMY_SSN_1",
       "platform_id": "ssn_akula",
       "name": "K-317 Pantera",
       "faction": "enemy",
-      "x": -25.0,
-      "y": -15.0,
+      "x": -45.0,
+      "y": -35.0,
       "heading": 90,
       "speed_kts": 8,
       "behavior": "attack",
@@ -80,24 +80,24 @@
       "platform_id": "ssn_akula",
       "name": "K-331 Magadan",
       "faction": "enemy",
-      "x": -30.0,
-      "y": 10.0,
+      "x": -50.0,
+      "y": 25.0,
       "heading": 135,
       "speed_kts": 6,
       "behavior": "patrol",
-      "waypoints": [[-20, 0], [-10, -10], [-20, -20], [-30, -10], [-30, 10]]
+      "waypoints": [[-40, 15], [-30, 5], [-40, -5], [-50, 5], [-50, 25]]
     },
     {
       "id": "ENEMY_SSN_3",
       "platform_id": "ssn_akula",
       "name": "K-391 Bratsk",
       "faction": "enemy",
-      "x": -40.0,
-      "y": -5.0,
+      "x": -60.0,
+      "y": -20.0,
       "heading": 45,
       "speed_kts": 4,
       "behavior": "patrol",
-      "waypoints": [[-35, 5], [-25, 15], [-35, 25], [-45, 15], [-40, -5]]
+      "waypoints": [[-55, -10], [-45, 0], [-55, 10], [-65, 0], [-60, -20]]
     }
   ]
 }

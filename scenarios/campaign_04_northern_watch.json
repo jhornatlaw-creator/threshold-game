@@ -55,38 +55,38 @@
       "platform_id": "ddg_udaloy",
       "name": "Admiral Vinogradov",
       "faction": "enemy",
-      "x": -10.0,
-      "y": -25.0,
+      "x": -15.0,
+      "y": -40.0,
       "heading": 180,
       "speed_kts": 20,
       "has_helicopter": true,
       "behavior": "patrol",
-      "waypoints": [[-5, -15], [5, -5], [-5, 5], [-15, -10], [-10, -25]]
+      "waypoints": [[-10, -30], [0, -20], [-10, -10], [-20, -25], [-15, -40]]
     },
     {
       "id": "ENEMY_UDALOY_2",
       "platform_id": "ddg_udaloy",
       "name": "Marshal Shaposhnikov",
       "faction": "enemy",
-      "x": -15.0,
-      "y": -28.0,
+      "x": -20.0,
+      "y": -45.0,
       "heading": 180,
       "speed_kts": 18,
       "has_helicopter": true,
       "behavior": "patrol",
-      "waypoints": [[-10, -18], [0, -8], [-10, 2], [-20, -13], [-15, -28]]
+      "waypoints": [[-15, -35], [-5, -25], [-15, -15], [-25, -30], [-20, -45]]
     },
     {
       "id": "ENEMY_SSN",
       "platform_id": "ssn_akula",
       "name": "K-480 Bars",
       "faction": "enemy",
-      "x": 20.0,
-      "y": -35.0,
+      "x": 25.0,
+      "y": -50.0,
       "heading": 315,
       "speed_kts": 6,
       "behavior": "patrol",
-      "waypoints": [[10, -25], [0, -15], [10, -5], [20, -20], [20, -35]]
+      "waypoints": [[15, -40], [5, -30], [15, -20], [25, -35], [25, -50]]
     }
   ]
 }

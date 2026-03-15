@@ -14,6 +14,11 @@
     "type": "destroy_all_enemies",
     "time_limit_seconds": 0
   },
+  "difficulty": {
+    "detection_mult": 1.0,
+    "player_pk_mult": 1.0,
+    "ai_attack_threshold": 0.3
+  },
   "units": [
     {
       "id": "TUT_PLAYER",

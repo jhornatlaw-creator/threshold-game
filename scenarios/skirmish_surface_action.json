@@ -12,7 +12,7 @@
   },
   "victory_condition": {
     "type": "destroy_all_enemies",
-    "time_limit_seconds": 5400
+    "time_limit_seconds": 7200
   },
   "difficulty": {
     "detection_mult": 1.2,
@@ -59,7 +59,7 @@
       "name": "Admiral Ushakov",
       "faction": "enemy",
       "x": 5.0,
-      "y": -80.0,
+      "y": -55.0,
       "heading": 180,
       "speed_kts": 28,
       "behavior": "attack",
@@ -71,7 +71,7 @@
       "name": "Admiral Levchenko",
       "faction": "enemy",
       "x": -8.0,
-      "y": -75.0,
+      "y": -50.0,
       "heading": 180,
       "speed_kts": 26,
       "has_helicopter": true,
@@ -84,7 +84,7 @@
       "name": "Admiral Kharlamov",
       "faction": "enemy",
       "x": 18.0,
-      "y": -78.0,
+      "y": -53.0,
       "heading": 180,
       "speed_kts": 26,
       "has_helicopter": true,

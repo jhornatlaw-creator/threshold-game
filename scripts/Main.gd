@@ -78,7 +78,6 @@ func _start_scenario(scenario_data: Dictionary) -> void:
 				SimulationWorld.unit_destroyed.emit(lost_id)
 				print("[THRESHOLD] %s was lost in a prior mission -- not available." % lost_id)
 
-	# Start paused -- player presses SPACE to begin
 	SimulationWorld.is_paused = true
 	SimulationWorld.time_scale = 1.0
 
@@ -96,16 +95,11 @@ func _start_scenario(scenario_data: Dictionary) -> void:
 			TutorialManager.activate(hud, render_bridge)
 	else:
 		# Normal mode: show briefing, set time limit, auto-select first player unit
-		# Try Dialogic narrative briefing first; fall back to HUD text overlay
-		var timeline_id: String = scenario_data.get("timeline", "")
-		var used_dialogic: bool = false
-		if timeline_id != "" and NarrativeDirector._has_dialogic():
-			NarrativeDirector.play_briefing(scenario_data)
-			used_dialogic = NarrativeDirector.is_playing()
-		if not used_dialogic and hud and hud.has_method("show_briefing"):
+		# Dialogic briefings disabled until style/input issues resolved
+		# var used_dialogic: bool = NarrativeDirector.play_briefing(scenario_data)
+		if hud and hud.has_method("show_briefing"):
 			var briefing_text: String = scenario_data.get("briefing", "")
 			if briefing_text != "":
-				briefing_text += "\n\nTIP: Press 2-5 to increase time compression."
 				hud.show_briefing(briefing_text)
 
 		# Campaign mission header

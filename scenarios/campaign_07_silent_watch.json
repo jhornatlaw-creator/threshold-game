@@ -56,24 +56,24 @@
       "platform_id": "ssn_akula",
       "name": "K-317 Pantera",
       "faction": "enemy",
-      "x": 20.0,
-      "y": -15.0,
+      "x": 30.0,
+      "y": -25.0,
       "heading": 215,
       "speed_kts": 5,
       "behavior": "evasive_patrol",
-      "waypoints": [[10, -30], [-5, -50], [-20, -65], [-35, -80], [-50, -100]]
+      "waypoints": [[20, -40], [5, -60], [-10, -75], [-25, -90], [-40, -110]]
     },
     {
       "id": "ENEMY_SSN_2",
       "platform_id": "ssn_akula",
       "name": "K-331 Magadan",
       "faction": "enemy",
-      "x": 35.0,
-      "y": 5.0,
+      "x": 45.0,
+      "y": -10.0,
       "heading": 200,
       "speed_kts": 4,
       "behavior": "evasive_patrol",
-      "waypoints": [[25, -15], [10, -35], [-10, -55], [-25, -70], [-40, -90]]
+      "waypoints": [[35, -30], [20, -50], [0, -70], [-15, -85], [-30, -105]]
     }
   ]
 }

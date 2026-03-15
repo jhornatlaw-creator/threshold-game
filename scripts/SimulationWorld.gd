@@ -534,6 +534,26 @@ func _ai_attack(uid: String, u: Dictionary) -> void:
 	if (tick_count + uid.hash()) % 5 == 0:  # Check every 5 ticks, staggered per unit
 		_ai_try_fire(uid, u, target_id, dist)
 
+	# AI helicopter with dipping sonar: hover periodically to get sonar contact
+	var has_dipping: bool = false
+	if u.get("is_airborne", false):
+		for sensor in u.get("sensors", []):
+			if sensor.get("subtype", "") == "dipping":
+				has_dipping = true
+				break
+	if has_dipping:
+		# Hover for 30 seconds, then reposition for 30 seconds
+		var dip_phase: int = (tick_count + uid.hash()) % 60
+		if dip_phase < 30:
+			# Hovering — dipping sonar active (speed < 5 kts)
+			u["speed_kts"] = 0.0
+			return
+		else:
+			# Reposition toward target for next dip
+			u["waypoints"] = [target["position"]]
+			u["speed_kts"] = u["max_speed_kts"] * 0.5
+			return
+
 	# Close to weapons range
 	var best_range: float = _get_best_weapon_range(u)
 	if dist > best_range * 0.8:
@@ -669,6 +689,7 @@ func _update_detections() -> void:
 				prev_tma_ticks = contacts[detector_id][target_id].get("tma_ticks", 0)
 
 			if detection["detected"]:
+				detection["_stale_ticks"] = 0  # Reset grace period on re-acquisition
 				contacts[detector_id][target_id] = detection
 				detector["contacts"][target_id] = detection
 				# TMA: bearing-only contacts accumulate bearing observations over time
@@ -692,9 +713,15 @@ func _update_detections() -> void:
 					contact_classified.emit(detector_id, target_id, detection)
 			else:
 				if prev_detected:
-					contacts[detector_id].erase(target_id)
-					detector["contacts"].erase(target_id)
-					detection_lost.emit(detector_id, target_id)
+					# Contact persistence: hold for grace period before dropping.
+					# Prevents per-tick detection flicker from breaking maintain_contact.
+					var stale_ticks: int = contacts[detector_id][target_id].get("_stale_ticks", 0) + 1
+					if stale_ticks >= 10:  # 10 seconds grace before contact loss
+						contacts[detector_id].erase(target_id)
+						detector["contacts"].erase(target_id)
+						detection_lost.emit(detector_id, target_id)
+					else:
+						contacts[detector_id][target_id]["_stale_ticks"] = stale_ticks
 
 	# SOSUS barrier detection (passive environmental sensor)
 	_update_sosus_detections()
@@ -915,11 +942,19 @@ func _radar_detection(detector: Dictionary, target: Dictionary, range_nm: float)
 func _sonar_detection_passive(detector: Dictionary, target: Dictionary, range_nm: float) -> Dictionary:
 	# Find best sonar sensor
 	var best_sonar: Dictionary = {}
+	var towed_penalty_db: float = 0.0
 	for sensor in detector["sensors"]:
 		if sensor.get("type", "") == "sonar":
 			# Dipping sonar only works when helicopter is hovering (speed < 5 kts)
 			if sensor.get("subtype", "") == "dipping" and detector.get("speed_kts", 0.0) >= 5.0:
 				continue
+			# Towed array degrades above 14 kts (own-ship noise drowns the array)
+			if sensor.get("subtype", "") == "towed_array":
+				var spd: float = detector.get("speed_kts", 0.0)
+				if spd > 20.0:
+					continue  # Completely ineffective above 20 kts
+				elif spd > 14.0:
+					towed_penalty_db = (spd - 14.0) * 3.0  # -3 dB per knot over 14
 			if best_sonar.is_empty() or sensor.get("sensitivity_db", 0) > best_sonar.get("sensitivity_db", 0):
 				best_sonar = sensor
 
@@ -981,6 +1016,10 @@ func _sonar_detection_passive(detector: Dictionary, target: Dictionary, range_nm
 	# Detector gain (array gain)
 	var array_gain: float = best_sonar.get("array_gain_db", 20.0)
 	snr += array_gain
+
+	# Towed array speed penalty (own-ship noise at high speed)
+	if towed_penalty_db > 0.0 and best_sonar.get("subtype", "") == "towed_array":
+		snr -= towed_penalty_db
 
 	# Item 16: difficulty scaling -- detection_mult adjusts SNR in dB
 	var det_mult: float = difficulty.get("detection_mult", 1.0)
@@ -1454,6 +1493,13 @@ func _resolve_weapons() -> void:
 			continue
 
 		var target: Dictionary = units[target_id]
+		# Skip already-dead targets (two weapons arriving same tick)
+		if not target["is_alive"]:
+			w["resolved"] = true
+			to_remove.append(wid)
+			weapon_resolved.emit(wid, target_id, false, 0.0)
+			continue
+
 		var dist: float = w["position"].distance_to(target["position"])
 
 		# Close enough to resolve
@@ -1515,6 +1561,7 @@ func _compute_weapon_hit(w: Dictionary, target: Dictionary) -> bool:
 	var shooter_id: String = w.get("shooter_id", "")
 	if shooter_id in units and units[shooter_id]["faction"] == "player":
 		final_pk *= difficulty.get("player_pk_mult", 1.0)
+	final_pk = clampf(final_pk, 0.0, 0.95)
 
 	var roll: float = _rng.randf()
 	return roll <= final_pk
@@ -1590,6 +1637,41 @@ func _check_scenario_conditions() -> void:
 				_game_over = true
 				scenario_ended.emit("victory")
 				is_paused = true
+
+		"protect_convoy":
+			# Kill all enemies, but defeat if any merchant is destroyed
+			var conv_enemies_alive := 0
+			var conv_player_combat := 0
+			var convoy_alive := true
+			for uid in units:
+				if not units[uid]["is_alive"]:
+					# Check if a dead unit was a merchant
+					if units[uid]["platform"].get("id", "") == "merchant_vessel":
+						convoy_alive = false
+					continue
+				if units[uid]["faction"] == "enemy":
+					conv_enemies_alive += 1
+				elif units[uid]["faction"] == "player":
+					conv_player_combat += 1
+
+			if not convoy_alive:
+				_game_over = true
+				scenario_ended.emit("defeat")
+				is_paused = true
+			elif conv_player_combat == 0:
+				_game_over = true
+				scenario_ended.emit("defeat")
+				is_paused = true
+			elif conv_enemies_alive == 0:
+				_game_over = true
+				scenario_ended.emit("victory")
+				is_paused = true
+			else:
+				var conv_time_limit: float = scenario.get("victory_condition", {}).get("time_limit_seconds", 0.0)
+				if conv_time_limit > 0.0 and sim_time >= conv_time_limit:
+					_game_over = true
+					scenario_ended.emit("draw")
+					is_paused = true
 
 		"maintain_contact":
 			# Player must maintain cumulative passive contact on all enemies

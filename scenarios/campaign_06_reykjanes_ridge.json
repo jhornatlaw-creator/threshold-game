@@ -12,7 +12,7 @@
   },
   "victory_condition": {
     "type": "destroy_all_enemies",
-    "time_limit_seconds": 3600
+    "time_limit_seconds": 5400
   },
   "difficulty": {
     "detection_mult": 0.7,
@@ -55,8 +55,8 @@
       "platform_id": "ssn_akula",
       "name": "K-317 Pantera",
       "faction": "enemy",
-      "x": 35.0,
-      "y": -10.0,
+      "x": 50.0,
+      "y": -15.0,
       "heading": 270,
       "speed_kts": 10,
       "behavior": "attack",
@@ -67,8 +67,8 @@
       "platform_id": "ssn_akula",
       "name": "K-331 Magadan",
       "faction": "enemy",
-      "x": 40.0,
-      "y": 15.0,
+      "x": 55.0,
+      "y": 20.0,
       "heading": 250,
       "speed_kts": 8,
       "behavior": "attack",
@@ -79,12 +79,12 @@
       "platform_id": "ssn_akula",
       "name": "K-391 Bratsk",
       "faction": "enemy",
-      "x": 45.0,
+      "x": 60.0,
       "y": 0.0,
       "heading": 260,
       "speed_kts": 6,
       "behavior": "patrol",
-      "waypoints": [[35, -5], [25, 0], [30, 10], [40, 5], [45, 0]]
+      "waypoints": [[50, -5], [40, 0], [45, 10], [55, 5], [60, 0]]
     }
   ]
 }

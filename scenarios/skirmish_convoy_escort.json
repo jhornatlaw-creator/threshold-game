@@ -11,7 +11,7 @@
     "thermal_layer_depth_m": 90
   },
   "victory_condition": {
-    "type": "destroy_all_enemies",
+    "type": "protect_convoy",
     "time_limit_seconds": 9000
   },
   "difficulty": {

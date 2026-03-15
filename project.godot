@@ -1,6 +1,10 @@
 ; Engine configuration file.
 ; It's best edited using the editor UI and not directly,
-; but it can also be edited manually.
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 
@@ -9,8 +13,8 @@ config_version=5
 config/name="THRESHOLD"
 config/description="Naval warfare tactical simulation"
 run/main_scene="res://scenes/mainmenu.tscn"
-config/icon="res://threshold.ico"
 config/features=PackedStringArray("4.6", "GL Compatibility")
+config/icon="res://threshold.ico"
 
 [autoload]
 
@@ -24,44 +28,73 @@ CampaignManager="*res://scripts/CampaignManager.gd"
 CRTEffect="*res://scripts/CRTEffect.gd"
 Minimap="*res://scripts/Minimap.gd"
 NarrativeDirector="*res://scripts/NarrativeDirector.gd"
+Dialogic="*uid://ds2q0uclmolvu"
+
+[dialogic]
+
+directories/dch_directory={}
+directories/dtl_directory={
+"cold_passage": "res://narrative/briefings/cold_passage.dtl",
+"convoy_escort": "res://narrative/briefings/convoy_escort.dtl",
+"lone_wolf": "res://narrative/briefings/lone_wolf.dtl",
+"north_atlantic_asw": "res://narrative/briefings/north_atlantic_asw.dtl",
+"surface_action": "res://narrative/briefings/surface_action.dtl",
+"torpedo_alley": "res://narrative/briefings/torpedo_alley.dtl"
+}
+layout/style_directory={
+"": "res://narrative/transmission_style.tres",
+"transmission_style": "res://narrative/transmission_style.tres"
+}
+layout/style_list=["res://narrative/transmission_style.tres"]
+layout/default_style="res://narrative/transmission_style.tres"
 
 [display]
 
 window/size/viewport_width=1920
 window/size/viewport_height=1080
-window/size/resizable=true
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/dialogic/plugin.cfg")
 
 [input]
 
 select_unit={
 "deadzone": 0.5,
-"events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":1,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":1,"canceled":false,"pressed":true,"double_click":false)]
+"events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":1,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":1,"canceled":false,"pressed":true,"double_click":false,"script":null)
+]
 }
 set_waypoint={
 "deadzone": 0.5,
-"events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":2,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":2,"canceled":false,"pressed":true,"double_click":false)]
+"events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":2,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":2,"canceled":false,"pressed":true,"double_click":false,"script":null)
+]
 }
 fire_weapon={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":70,"physical_keycode":70,"key_label":70,"unicode":102,"location":0,"echo":false)]
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":70,"physical_keycode":70,"key_label":70,"unicode":102,"location":0,"echo":false,"script":null)
+]
 }
 time_faster={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194325,"physical_keycode":4194325,"key_label":4194325,"unicode":0,"location":0,"echo":false)]
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194325,"physical_keycode":4194325,"key_label":4194325,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 time_slower={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194323,"physical_keycode":4194323,"key_label":4194323,"unicode":0,"location":0,"echo":false)]
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194323,"physical_keycode":4194323,"key_label":4194323,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 pause_toggle={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":32,"physical_keycode":32,"key_label":32,"unicode":32,"location":0,"echo":false)]
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":32,"physical_keycode":32,"key_label":32,"unicode":32,"location":0,"echo":false,"script":null)
+]
 }
 dialogic_default_action={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194309,"physical_keycode":4194309,"key_label":4194309,"unicode":0,"location":0,"echo":false)]
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194309,"physical_keycode":4194309,"key_label":4194309,"unicode":0,"location":0,"echo":false,"script":null)
+]
 }
 
 [rendering]

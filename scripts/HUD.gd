@@ -27,6 +27,8 @@ extends Control
 var _current_time_scale: float = 1.0
 var _selected_unit_id: String = ""
 var _briefing_panel: PanelContainer = null  # X-1: briefing overlay
+var _briefing_countdown: float = 0.0  # Countdown seconds remaining
+var _briefing_hint_label: Label = null  # Reference to countdown hint label
 var _message_label: Label = null  # BL-2: transient message display
 var _message_timer: float = 0.0
 var _alert_label: Label = null  # EN-1: torpedo alert display
@@ -45,6 +47,12 @@ var _campaign_total: int = 0  # Total campaign missions
 var _campaign_name: String = ""  # Current mission name for campaign header
 var _tracking_target_seconds: float = 0.0  # Required contact time for maintain_contact
 var _weather_label: Label = null  # Weather/sea state top-bar display
+
+func _exit_tree() -> void:
+	if SimulationWorld.sim_tick.is_connected(_on_sim_tick):
+		SimulationWorld.sim_tick.disconnect(_on_sim_tick)
+	if SimulationWorld.weather_changed.is_connected(_on_weather_changed):
+		SimulationWorld.weather_changed.disconnect(_on_weather_changed)
 
 func _ready() -> void:
 	unit_panel.visible = false
@@ -111,6 +119,15 @@ func _process(delta: float) -> void:
 		if _alert_timer <= 0.0:
 			_alert_label.queue_free()
 			_alert_label = null
+	# Briefing countdown (uses real time, not sim time; frozen if pause menu is up)
+	if _briefing_countdown > 0.0 and _briefing_panel and _pause_menu == null:
+		_briefing_countdown -= delta
+		var secs: int = ceili(_briefing_countdown)
+		if _briefing_hint_label:
+			_briefing_hint_label.text = "Mission begins in %d seconds  |  SPACE to skip" % secs
+		if _briefing_countdown <= 0.0:
+			dismiss_briefing()
+			SimulationWorld.is_paused = false
 
 # ---------------------------------------------------------------------------
 # Public methods called by RenderBridge
@@ -326,7 +343,7 @@ func show_result(result: String) -> void:
 		# Filter to ships lost in missions BEFORE this one
 		var prior_only: Array = []
 		for ship in prior_lost:
-			if ship.get("lost_mission", _campaign_mission) < _campaign_mission - 1:
+			if ship.get("lost_mission", _campaign_mission) < _campaign_mission:
 				prior_only.append(ship)
 		if not prior_only.is_empty():
 			_debrief_add_spacer(vbox, 2)
@@ -950,13 +967,14 @@ func show_briefing(text: String) -> void:
 	spacer2.custom_minimum_size = Vector2(0, 15)
 	vbox.add_child(spacer2)
 
-	var hint_lbl := Label.new()
-	hint_lbl.text = "[ Press SPACE to begin ]"
-	hint_lbl.add_theme_font_size_override("font_size", 12)
-	hint_lbl.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
-	hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(hint_lbl)
+	_briefing_hint_label = Label.new()
+	_briefing_hint_label.text = "Mission begins in 30 seconds  |  SPACE to skip"
+	_briefing_hint_label.add_theme_font_size_override("font_size", 12)
+	_briefing_hint_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	_briefing_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_briefing_hint_label)
 
+	_briefing_countdown = 30.0
 	add_child(_briefing_panel)
 
 ## Item 7: check if briefing panel is currently shown
@@ -967,6 +985,8 @@ func dismiss_briefing() -> void:
 	if _briefing_panel:
 		_briefing_panel.queue_free()
 		_briefing_panel = null
+		_briefing_countdown = 0.0
+		_briefing_hint_label = null
 
 ## Set the currently armed weapon ID for the > indicator in weapon list
 func set_armed_weapon(weapon_id: String) -> void:

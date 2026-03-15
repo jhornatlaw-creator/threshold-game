@@ -41,6 +41,34 @@ const NM_TO_PX: float = 10.0
 # ---------------------------------------------------------------------------
 # Lifecycle
 # ---------------------------------------------------------------------------
+func _exit_tree() -> void:
+	# Disconnect signals from autoload singletons to prevent accumulation across scene reloads
+	var sigs: Array = [
+		[SimulationWorld.unit_spawned, _on_unit_spawned],
+		[SimulationWorld.unit_moved, _on_unit_moved],
+		[SimulationWorld.unit_heading_changed, _on_unit_heading_changed],
+		[SimulationWorld.unit_destroyed, _on_unit_destroyed],
+		[SimulationWorld.unit_detected, _on_unit_detected],
+		[SimulationWorld.detection_lost, _on_detection_lost],
+		[SimulationWorld.weapon_fired, _on_weapon_fired],
+		[SimulationWorld.weapon_moved, _on_weapon_moved],
+		[SimulationWorld.weapon_resolved, _on_weapon_resolved],
+		[SimulationWorld.weapon_removed, _on_weapon_removed],
+		[SimulationWorld.scenario_started, _on_scenario_started],
+		[SimulationWorld.scenario_ended, _on_scenario_ended],
+		[SimulationWorld.sim_tick, _on_sim_tick],
+		[SimulationWorld.time_scale_changed, _on_time_scale_changed],
+		[SimulationWorld.contact_classified, _on_contact_classified],
+		[SimulationWorld.sosus_contact, _on_sosus_contact],
+		[SimulationWorld.helicopter_launched, _on_helicopter_launched],
+		[SimulationWorld.aircraft_bingo, _on_aircraft_bingo],
+		[SimulationWorld.aircraft_landed, _on_aircraft_landed],
+		[SimulationWorld.aircraft_crashed, _on_aircraft_crashed],
+	]
+	for pair in sigs:
+		if pair[0].is_connected(pair[1]):
+			pair[0].disconnect(pair[1])
+
 func _ready() -> void:
 	_connect_signals()
 	_setup_camera()
@@ -577,9 +605,10 @@ func _unhandled_input(event: InputEvent) -> void:
 					SimulationWorld.pause()
 					get_tree().call_deferred("reload_current_scene")
 					return
-				# Item 7: if briefing panel exists, ONLY dismiss briefing (don't unpause)
+				# Item 7: if briefing panel exists, dismiss and start the mission
 				if hud and hud.has_method("has_briefing") and hud.has_briefing():
 					hud.dismiss_briefing()
+					SimulationWorld.is_paused = false
 					return
 				SimulationWorld.toggle_pause()
 			KEY_KP_ADD:
@@ -926,12 +955,17 @@ func _cycle_player_unit() -> void:
 		camera.position = _unit_visuals[uid].position
 
 func _handle_escape() -> void:
-	## ESC key: if pause menu visible -> close it; if unit/target selected -> clear;
-	## otherwise -> open pause menu.
+	## ESC key: if pause menu visible -> close it; if briefing/tutorial active -> ignore;
+	## if unit/target selected -> clear; otherwise -> open pause menu.
 	if hud and hud.has_method("is_pause_menu_visible") and hud.is_pause_menu_visible():
 		# Pause menu open -- close it and resume
 		hud.close_pause_menu()
 		SimulationWorld.unpause()
+		return
+	# Block ESC while briefing or tutorial prompt is active (prevent panel stacking)
+	if hud and hud.has_method("has_briefing") and hud.has_briefing():
+		return
+	if hud and hud.has_method("has_tutorial_prompt") and hud.has_tutorial_prompt():
 		return
 	if _selected_unit_id != "" or _fire_target_id != "":
 		# Something selected -- clear selection/target first
