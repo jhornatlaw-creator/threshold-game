@@ -1,0 +1,104 @@
+{
+  "name": "Convoy Escort",
+  "description": "Escort CONVOY NX-42 across the Atlantic. Two Akula-class submarines are repositioning to intercept.",
+  "briefing": "CLASSIFICATION: SECRET\n\nTO: Commander, Escort Group NOVEMBER\nFROM: COMNAVSURFLANT\nDTG: 081600Z NOV 1985\n\nCONVOY NX-42 is underway from Norfolk, bound for the UK. Two vessels: MV Atlantic Conveyor and MV Nordic Ferry. Military cargo. Arrival is non-negotiable.\n\nSIGINT intercepted repositioning orders for at least two Akula-class boats twenty hours ago. Bearing tracks and traffic analysis put them somewhere across the convoy's projected track. They know the route. They probably have it to within twenty miles.\n\nThe convoy cannot stop. The convoy cannot deviate. They are on a fixed course at 14 knots and they are not your asset to maneuver.\n\nYour task force: USS Hayler (DDG), USS McClusky (FFG). DAGGER 03 P-3C from Lajes is assigned to your escort group for wide-area search. Use it.\n\nThe P-3 is the only asset you have that can cover the search box the convoy is transiting in the next four hours. Get it out ahead and find those boats before they find the merchant ships.\n\nRules of engagement: weapons free on confirmed hostile subsurface contacts.",
+  "environment": {
+    "sea_state": 3,
+    "time_of_day": 10.0,
+    "weather": "clear",
+    "water_depth_m": 400,
+    "thermal_layer_depth_m": 90
+  },
+  "victory_condition": {
+    "type": "destroy_all_enemies",
+    "time_limit_seconds": 9000
+  },
+  "difficulty": {
+    "detection_mult": 1.0,
+    "player_pk_mult": 1.0,
+    "ai_attack_threshold": 0.25
+  },
+  "units": [
+    {
+      "id": "PLAYER_DDG",
+      "platform_id": "ddg_arleigh_burke",
+      "name": "USS Hayler",
+      "faction": "player",
+      "x": -5.0,
+      "y": 0.0,
+      "heading": 70,
+      "speed_kts": 14,
+      "waypoints": [[25, 10], [55, 20]]
+    },
+    {
+      "id": "PLAYER_FFG",
+      "platform_id": "ffg_oliver_hazard_perry",
+      "name": "USS McClusky",
+      "faction": "player",
+      "x": -5.0,
+      "y": -8.0,
+      "heading": 70,
+      "speed_kts": 14,
+      "waypoints": [[25, 2], [55, 12]]
+    },
+    {
+      "id": "PLAYER_MPA",
+      "platform_id": "p3c_orion",
+      "name": "DAGGER 03",
+      "faction": "player",
+      "x": 15.0,
+      "y": 20.0,
+      "heading": 130,
+      "speed_kts": 200,
+      "is_airborne": true,
+      "altitude_ft": 1200,
+      "waypoints": [[30, 5], [45, -10], [60, 0], [50, 15], [30, 20], [15, 20]]
+    },
+    {
+      "id": "CONVOY_LEAD",
+      "platform_id": "ffg_oliver_hazard_perry",
+      "name": "MV Atlantic Conveyor",
+      "faction": "player",
+      "x": 0.0,
+      "y": -2.0,
+      "heading": 70,
+      "speed_kts": 14,
+      "waypoints": [[30, 8], [60, 18]]
+    },
+    {
+      "id": "CONVOY_TRAIL",
+      "platform_id": "ffg_oliver_hazard_perry",
+      "name": "MV Nordic Ferry",
+      "faction": "player",
+      "x": -8.0,
+      "y": -5.0,
+      "heading": 70,
+      "speed_kts": 14,
+      "waypoints": [[22, 5], [52, 15]]
+    },
+    {
+      "id": "ENEMY_SSN_1",
+      "platform_id": "ssn_akula",
+      "name": "K-157 Vepr",
+      "faction": "enemy",
+      "x": 40.0,
+      "y": -20.0,
+      "heading": 340,
+      "speed_kts": 8,
+      "behavior": "attack",
+      "behavior_data": {"target_id": "CONVOY_LEAD"}
+    },
+    {
+      "id": "ENEMY_SSN_2",
+      "platform_id": "ssn_akula",
+      "name": "K-335 Gepard",
+      "faction": "enemy",
+      "x": 55.0,
+      "y": 30.0,
+      "heading": 200,
+      "speed_kts": 6,
+      "behavior": "attack",
+      "behavior_data": {"target_id": "CONVOY_TRAIL"}
+    }
+  ]
+}

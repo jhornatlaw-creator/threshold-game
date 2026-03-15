@@ -1,4 +1,4 @@
-# THRESHOLD v0.2-beta
+# THRESHOLD v0.3-beta
 
 Cold War naval warfare simulation — command US surface ships and submarines in the North Atlantic, hunting Soviet contacts before they slip through.
 
@@ -26,6 +26,7 @@ Double-click `THRESHOLD.exe`. No install required.
 | Space | Pause / unpause |
 | 1 - 5 | Time scale (1x through 5x) |
 | F1 | Toggle controls reference |
+| V | Toggle CRT monitor effect |
 | Esc | Menu |
 
 ## What to Test
@@ -36,6 +37,10 @@ Double-click `THRESHOLD.exe`. No install required.
 - **Sonar and radar detection** — Verify contacts appear on passive sonar (bearing-only), active sonar, and radar at expected ranges. Check that TMA resolves range after ~15 minutes of tracking.
 - **Weapon engagement** — Fire torpedoes and missiles at designated targets. Confirm hit/miss resolution and scoring feedback.
 - **Scoring** — Verify end-of-mission score is displayed and reflects hits, misses, and time.
+- **Mission Debrief** — After each mission, check the debrief screen shows score breakdown, fleet status, and narrative situation report.
+- **CRT Mode** — Press V to toggle the retro CRT monitor effect. Verify scanlines, vignette, and barrel distortion render correctly.
+- **Weather** — In longer missions, sea state may shift. Check if sonar/radar performance changes with conditions.
+- **New scenarios** — Try Torpedo Alley, Convoy Escort, Surface Action, and Lone Wolf from Single Mission menu.
 
 ## Known Limitations
 
@@ -51,4 +56,4 @@ Include: what you were doing, what happened, and what you expected to happen. Sc
 
 ## Version
 
-v0.2-beta — 2026-03-15
+v0.3-beta — 2026-03-15

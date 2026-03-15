@@ -1,0 +1,58 @@
+{
+  "name": "Lone Wolf",
+  "description": "USS Jacksonville alone in a 60x60 NM deep-water patrol box. Two Akulas are in there somewhere. Find them.",
+  "briefing": "CLASSIFICATION: SECRET\n\nTO: Commanding Officer, USS Jacksonville (SSN-699)\nFROM: COMSUBNORLANT\nDTG: 090300Z NOV 1985\n\nUSS Jacksonville. Alone and unafraid.\n\nSOSUS detected two contacts passing through the GIUK Gap 36 hours ago. Bearing tracks put them somewhere in your patrol box -- a 60-by-60 nautical mile square of deep Atlantic. They're deep, they're quiet, and they're not in a hurry.\n\nYou have Mk48 ADCAP torpedoes and patience. No surface support. No air cover. No second chances.\n\nFind them. Kill them. Come home.\n\nIntel assessment: both contacts are Akula-class. One may be running a racetrack pattern. The other has been inconsistent -- possible sprint-and-drift. Do not assume you have their position. You do not.\n\nStanding orders: maintain below the thermal layer. Go active only if you have a firing solution. One ping, one kill.\n\nThe convergence zone is your friend. Use it before they do.",
+  "environment": {
+    "sea_state": 2,
+    "time_of_day": 8.0,
+    "weather": "clear",
+    "water_depth_m": 500,
+    "thermal_layer_depth_m": 120
+  },
+  "victory_condition": {
+    "type": "destroy_all_enemies",
+    "time_limit_seconds": 10800
+  },
+  "difficulty": {
+    "detection_mult": 0.7,
+    "player_pk_mult": 1.0,
+    "ai_attack_threshold": 0.3
+  },
+  "units": [
+    {
+      "id": "PLAYER_SSN",
+      "platform_id": "ssn_los_angeles",
+      "name": "USS Jacksonville",
+      "faction": "player",
+      "x": 0.0,
+      "y": 0.0,
+      "heading": 45,
+      "speed_kts": 3,
+      "waypoints": [[10, -10], [20, -5], [15, 10], [0, 15], [-10, 5], [0, 0]]
+    },
+    {
+      "id": "ENEMY_SSN_1",
+      "platform_id": "ssn_akula",
+      "name": "K-154 Tigr",
+      "faction": "enemy",
+      "x": 35.0,
+      "y": -25.0,
+      "heading": 270,
+      "speed_kts": 4,
+      "behavior": "patrol",
+      "waypoints": [[20, -25], [5, -30], [-5, -20], [10, -10], [25, -15], [35, -25]]
+    },
+    {
+      "id": "ENEMY_SSN_2",
+      "platform_id": "ssn_akula",
+      "name": "K-419 Kuzbass",
+      "faction": "enemy",
+      "x": -20.0,
+      "y": -40.0,
+      "heading": 90,
+      "speed_kts": 5,
+      "behavior": "patrol",
+      "waypoints": [[-5, -40], [10, -50], [20, -45], [15, -30], [-5, -25], [-20, -35], [-20, -40]]
+    }
+  ]
+}

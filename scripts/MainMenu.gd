@@ -84,7 +84,7 @@ func _build_layout() -> void:
 	_menu_container.add_child(bottom_spacer)
 
 	var version := Label.new()
-	version.text = "v0.2-beta"
+	version.text = "v0.3-beta"
 	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	version.add_theme_font_size_override("font_size", 12)
 	version.add_theme_color_override("font_color", COLOR_VERSION)

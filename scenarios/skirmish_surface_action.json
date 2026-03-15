@@ -1,0 +1,94 @@
+{
+  "name": "Surface Action",
+  "description": "A Kirov-class battlecruiser and two Udaloy escorts have broken out of the Norwegian Sea heading south. Stop them.",
+  "briefing": "CLASSIFICATION: SECRET -- FLASH\n\nTO: Commander, Surface Action Group TANGO\nFROM: SACLANT\nDTG: 141030Z NOV 1985\n\nFLASH priority.\n\nKirov-class battlecruiser, hull designation ADMIRAL USHAKOV, with two Udaloy escorts departed Severomorsk eighteen hours ago. They are now in the Norwegian Sea heading south at 28 knots. No clear tactical objective has been established. That is what concerns us.\n\nThe Kirov carries 20 P-700 Granit anti-ship cruise missiles. Range exceeds 300 nautical miles. Each one is designed to mission-kill a cruiser. At Mach 1.6, they do not miss.\n\nYou have three surface combatants. You do not have a submarine. You do not have fixed-wing air cover. What you have is Harpoon, SM-2, and the knowledge that their defensive systems can be saturated if you coordinate the strike properly.\n\nClose to Harpoon range. Coordinate your firing sequence. Saturate their Kashtan and SA-N-6. If they launch helicopters, SM-2.\n\nThis is not the engagement anybody planned for. Surface actions at this scale have not happened since the Falklands.\n\nMake it count.\n\nRules of engagement: weapons free.",
+  "environment": {
+    "sea_state": 3,
+    "time_of_day": 14.0,
+    "weather": "clear",
+    "water_depth_m": 350,
+    "thermal_layer_depth_m": 85
+  },
+  "victory_condition": {
+    "type": "destroy_all_enemies",
+    "time_limit_seconds": 5400
+  },
+  "difficulty": {
+    "detection_mult": 1.2,
+    "player_pk_mult": 0.9,
+    "ai_attack_threshold": 0.2
+  },
+  "units": [
+    {
+      "id": "PLAYER_DDG_1",
+      "platform_id": "ddg_arleigh_burke",
+      "name": "USS Arleigh Burke",
+      "faction": "player",
+      "x": 0.0,
+      "y": 0.0,
+      "heading": 0,
+      "speed_kts": 28,
+      "waypoints": [[0, -30]]
+    },
+    {
+      "id": "PLAYER_DDG_2",
+      "platform_id": "ddg_arleigh_burke",
+      "name": "USS Barry",
+      "faction": "player",
+      "x": 8.0,
+      "y": 5.0,
+      "heading": 0,
+      "speed_kts": 28,
+      "waypoints": [[8, -25]]
+    },
+    {
+      "id": "PLAYER_FFG",
+      "platform_id": "ffg_oliver_hazard_perry",
+      "name": "USS Doyle",
+      "faction": "player",
+      "x": -8.0,
+      "y": 5.0,
+      "heading": 0,
+      "speed_kts": 25,
+      "waypoints": [[-8, -25]]
+    },
+    {
+      "id": "ENEMY_CGN",
+      "platform_id": "cgn_kirov",
+      "name": "Admiral Ushakov",
+      "faction": "enemy",
+      "x": 5.0,
+      "y": -80.0,
+      "heading": 180,
+      "speed_kts": 28,
+      "behavior": "attack",
+      "behavior_data": {"target_id": "PLAYER_DDG_1"}
+    },
+    {
+      "id": "ENEMY_UDALOY_1",
+      "platform_id": "ddg_udaloy",
+      "name": "Admiral Levchenko",
+      "faction": "enemy",
+      "x": -8.0,
+      "y": -75.0,
+      "heading": 180,
+      "speed_kts": 26,
+      "has_helicopter": true,
+      "behavior": "attack",
+      "behavior_data": {"target_id": "PLAYER_DDG_2"}
+    },
+    {
+      "id": "ENEMY_UDALOY_2",
+      "platform_id": "ddg_udaloy",
+      "name": "Admiral Kharlamov",
+      "faction": "enemy",
+      "x": 18.0,
+      "y": -78.0,
+      "heading": 180,
+      "speed_kts": 26,
+      "has_helicopter": true,
+      "behavior": "attack",
+      "behavior_data": {"target_id": "PLAYER_FFG"}
+    }
+  ]
+}

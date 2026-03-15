@@ -576,6 +576,12 @@ func _unhandled_input(event: InputEvent) -> void:
 					else:
 						if hud and hud.has_method("show_message"):
 							hud.show_message("NO HELICOPTER ON THIS SHIP", 2.0)
+			KEY_V:
+				# Phase 2: toggle CRT post-processing overlay
+				if not event.echo:
+					CRTEffect.enabled = not CRTEffect.enabled
+					if hud and hud.has_method("show_message"):
+						hud.show_message("CRT MODE: %s" % ("ON" if CRTEffect.enabled else "OFF"), 2.0)
 			KEY_TAB:
 				_cycle_player_unit()  # M-6: Tab cycles through player units
 			KEY_ESCAPE:

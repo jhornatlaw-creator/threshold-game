@@ -25,6 +25,7 @@ signal time_scale_changed(new_scale: float)
 signal contact_classified(detector_id: String, target_id: String, classification: Dictionary)
 signal sosus_contact(barrier_id: String, bearing_deg: float, confidence: float)
 signal helicopter_launched(parent_id: String, helo_id: String)
+signal weather_changed(sea_state: int, weather: String, visibility: float)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -72,6 +73,13 @@ var _contact_accumulator: float = 0.0  # Cumulative seconds of contact for maint
 var difficulty: Dictionary = {}  # Item 16: difficulty scaling from scenario
 var sosus_barriers: Array = []  # Array of {id, start_pos, end_pos, sensitivity_db}
 
+# Weather / environment state
+var weather_sea_state: int = 4
+var weather_type: String = "overcast"  # clear, overcast, rain, storm
+var weather_wind_kts: float = 15.0
+var weather_visibility_nm: float = 20.0  # affects radar max range
+var _last_weather_check_time: float = 0.0
+
 # ---------------------------------------------------------------------------
 # Lifecycle
 # ---------------------------------------------------------------------------
@@ -102,6 +110,7 @@ func _sim_tick() -> void:
 	_move_weapons()
 	_resolve_weapons()
 	_check_scenario_conditions()
+	_maybe_update_weather(sim_time)
 	sim_tick.emit(tick_count, sim_time)
 
 # ---------------------------------------------------------------------------
@@ -779,6 +788,9 @@ func _radar_detection(detector: Dictionary, target: Dictionary, range_nm: float)
 	if target["platform"].get("has_ecm", false):
 		effective_range *= 0.7
 
+	# Weather / sea state clutter modifier (rain + high sea state mask surface contacts)
+	effective_range *= _weather_radar_modifier()
+
 	# Probability based on range vs effective range
 	var p_detect: float = 0.0
 	if range_nm <= 0.1:
@@ -838,10 +850,10 @@ func _sonar_detection_passive(detector: Dictionary, target: Dictionary, range_nm
 	# Target Strength (TS) -- not used in passive, set to 0
 	var ts_db: float = 0.0
 
-	# Noise Level at detector: ambient + sea state
+	# Noise Level at detector: ambient + sea state + weather sea state modifier
 	var sea_state: int = environment.get("sea_state", 3)
 	var ambient_noise: float = 40.0 + 3.0 * sea_state  # BL-1: 40dB at SS0, +3dB per state (open Atlantic)
-	var nl_db: float = ambient_noise
+	var nl_db: float = ambient_noise + _sea_state_noise_modifier(weather_sea_state)
 
 	# Thermal layer: if target is below thermal layer and detector is above (or vice versa),
 	# add 15dB loss
@@ -916,9 +928,9 @@ func _sonar_detection_active(detector: Dictionary, target: Dictionary, range_nm:
 	# Target Strength
 	var ts_db: float = target["platform"].get("target_strength_db", 15.0)
 
-	# Noise Level
+	# Noise Level + active sonar reverb modifier from weather sea state
 	var sea_state: int = environment.get("sea_state", 3)
-	var nl_db: float = 40.0 + 3.0 * sea_state  # BL-1: open Atlantic realistic ambient noise
+	var nl_db: float = 40.0 + 3.0 * sea_state + _sea_state_active_sonar_modifier(weather_sea_state)  # BL-1: open Atlantic realistic ambient noise
 
 	# Thermal layer penalty
 	var thermal_depth: float = environment.get("thermal_layer_depth_m", 75.0)
@@ -1005,6 +1017,98 @@ func _snr_to_probability(snr_db: float) -> float:
 	# Sigmoid mapping: SNR -> probability
 	# At SNR=0dB -> ~50% detection, SNR=10dB -> ~93%, SNR=-10dB -> ~7%
 	return 1.0 / (1.0 + exp(-0.5 * snr_db))
+
+# ---------------------------------------------------------------------------
+# Weather helper functions
+# ---------------------------------------------------------------------------
+
+## Returns wind speed in knots from Beaufort-scale sea state approximation.
+func _sea_state_to_wind(ss: int) -> float:
+	match ss:
+		1: return 5.0
+		2: return 10.0
+		3: return 15.0
+		4: return 20.0
+		5: return 30.0
+		6: return 40.0
+		_: return 20.0
+
+## Returns visibility in nautical miles based on weather type and sea state.
+func _weather_to_visibility(weather: String, ss: int) -> float:
+	var base: float
+	match weather:
+		"clear": base = 30.0
+		"overcast": base = 20.0
+		"rain": base = 8.0
+		"storm": base = 3.0
+		_: base = 20.0
+	# High sea state reduces visibility further
+	if ss >= 5:
+		base *= 0.7
+	return base
+
+## Returns ambient noise modifier in dB for passive sonar based on sea state.
+## Based on Wenz curves for wind-driven ocean noise.
+## SS1-2: quieter ocean improves passive sonar; SS5-6: nearly unusable.
+func _sea_state_noise_modifier(ss: int) -> float:
+	match ss:
+		1: return -6.0  # Very calm, excellent passive sonar conditions
+		2: return -3.0
+		3: return 0.0   # Baseline
+		4: return 3.0   # Moderate degradation
+		5: return 8.0   # Significant noise, passive sonar struggling
+		6: return 14.0  # Awful conditions, nearly blind
+		_: return 0.0
+
+## Returns active sonar reverb penalty in dB based on sea state.
+## Active sonar less affected by ambient noise but reverb increases with sea state.
+func _sea_state_active_sonar_modifier(ss: int) -> float:
+	match ss:
+		1: return -2.0
+		2: return -1.0
+		3: return 0.0
+		4: return 1.0
+		5: return 3.0
+		6: return 5.0
+		_: return 0.0
+
+## Returns a range multiplier for radar effective detection range.
+## Rain and high sea state cause clutter that masks contacts.
+func _weather_radar_modifier() -> float:
+	var mult: float = 1.0
+	match weather_type:
+		"clear": mult = 1.0
+		"overcast": mult = 0.95
+		"rain": mult = 0.7   # Rain clutter significant
+		"storm": mult = 0.4  # Severe clutter, radar nearly useless
+	# Sea state clutter (affects surface radar)
+	if weather_sea_state >= 5:
+		mult *= 0.8
+	if weather_sea_state >= 6:
+		mult *= 0.7
+	return mult
+
+## Checks for gradual weather shifts every 30 minutes of sim time.
+## 30% cumulative chance per interval that sea state shifts ±1.
+## Emits weather_changed signal if conditions change.
+const WEATHER_CHECK_INTERVAL: float = 1800.0  # 30 minutes sim time
+
+func _maybe_update_weather(sim_time_now: float) -> void:
+	if sim_time_now - _last_weather_check_time < WEATHER_CHECK_INTERVAL:
+		return
+	_last_weather_check_time = sim_time_now
+	# 30% chance of sea state shift (15% up, 15% down)
+	var roll: float = randf()
+	if roll < 0.15:
+		weather_sea_state = mini(weather_sea_state + 1, 6)
+		weather_wind_kts = _sea_state_to_wind(weather_sea_state)
+		weather_visibility_nm = _weather_to_visibility(weather_type, weather_sea_state)
+		weather_changed.emit(weather_sea_state, weather_type, weather_visibility_nm)
+	elif roll < 0.30:
+		weather_sea_state = maxi(weather_sea_state - 1, 1)
+		weather_wind_kts = _sea_state_to_wind(weather_sea_state)
+		weather_visibility_nm = _weather_to_visibility(weather_type, weather_sea_state)
+		weather_changed.emit(weather_sea_state, weather_type, weather_visibility_nm)
 
 # ---------------------------------------------------------------------------
 # Contact classification
@@ -1386,6 +1490,14 @@ func load_scenario(scenario_data: Dictionary) -> void:
 	scenario = scenario_data
 	environment = scenario_data.get("environment", environment)
 	difficulty = scenario_data.get("difficulty", {})  # Item 16: load difficulty scaling
+
+	# Initialize weather state from scenario environment block
+	var env: Dictionary = scenario_data.get("environment", {})
+	weather_sea_state = env.get("sea_state", 4)
+	weather_type = env.get("weather", "overcast")
+	weather_wind_kts = _sea_state_to_wind(weather_sea_state)
+	weather_visibility_nm = _weather_to_visibility(weather_type, weather_sea_state)
+	_last_weather_check_time = 0.0
 
 	# Spawn units defined in scenario
 	for unit_def in scenario_data.get("units", []):

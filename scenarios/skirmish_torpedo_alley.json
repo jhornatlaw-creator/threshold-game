@@ -1,0 +1,81 @@
+{
+  "name": "Torpedo Alley",
+  "description": "Three Akula-class submarines are threading the Denmark Strait in column. Close the trap.",
+  "briefing": "CLASSIFICATION: SECRET\n\nTO: Commander, Strike Group WHISKEY\nFROM: COMSUBNORLANT INTEL WATCH\nDTG: 121400Z OCT 1985\n\nThree contacts. Akula-class. Transiting the Denmark Strait in column formation. Running shallow, running fast. Probably repositioning to support North Sea operations.\n\nThe strait is 180 miles wide but the safe lane is 40. Biologics are dense. Bottom bounce is everywhere. Detection ranges are degraded by at least forty percent.\n\nUSS Bremerton (SSN-698) is already in the water ahead of them, holding position below the thermal layer. She knows they're coming. They don't know she's there.\n\nUSS Spruance (DD-963) is racing south from the Greenland coast to cut off retreat. She will not arrive clean.\n\nThis will be close. It will be ugly. The strait is narrow enough that someone is going to take a torpedo in the first ten minutes.\n\nDo not let it be you.\n\nRules of engagement: weapons free on confirmed hostile subsurface contacts.",
+  "environment": {
+    "sea_state": 5,
+    "time_of_day": 2.0,
+    "weather": "overcast",
+    "water_depth_m": 150,
+    "thermal_layer_depth_m": 40
+  },
+  "victory_condition": {
+    "type": "destroy_all_enemies",
+    "time_limit_seconds": 4500
+  },
+  "difficulty": {
+    "detection_mult": 0.8,
+    "player_pk_mult": 1.0,
+    "ai_attack_threshold": 0.15
+  },
+  "units": [
+    {
+      "id": "PLAYER_DDG",
+      "platform_id": "ddg_arleigh_burke",
+      "name": "USS Spruance",
+      "faction": "player",
+      "x": 0.0,
+      "y": 0.0,
+      "heading": 315,
+      "speed_kts": 20,
+      "waypoints": [[-8, -12]]
+    },
+    {
+      "id": "PLAYER_SSN",
+      "platform_id": "ssn_los_angeles",
+      "name": "USS Bremerton",
+      "faction": "player",
+      "x": -5.0,
+      "y": -18.0,
+      "heading": 0,
+      "speed_kts": 3,
+      "waypoints": [[-5, -18]]
+    },
+    {
+      "id": "ENEMY_SSN_1",
+      "platform_id": "ssn_akula",
+      "name": "K-263 Barnaul",
+      "faction": "enemy",
+      "x": -12.0,
+      "y": -28.0,
+      "heading": 0,
+      "speed_kts": 12,
+      "behavior": "attack",
+      "behavior_data": {"target_id": "PLAYER_DDG"}
+    },
+    {
+      "id": "ENEMY_SSN_2",
+      "platform_id": "ssn_akula",
+      "name": "K-328 Leopard",
+      "faction": "enemy",
+      "x": -8.0,
+      "y": -35.0,
+      "heading": 0,
+      "speed_kts": 10,
+      "behavior": "attack",
+      "behavior_data": {"target_id": "PLAYER_SSN"}
+    },
+    {
+      "id": "ENEMY_SSN_3",
+      "platform_id": "ssn_akula",
+      "name": "K-461 Volk",
+      "faction": "enemy",
+      "x": -15.0,
+      "y": -42.0,
+      "heading": 5,
+      "speed_kts": 11,
+      "behavior": "attack",
+      "behavior_data": {"target_id": "PLAYER_DDG"}
+    }
+  ]
+}

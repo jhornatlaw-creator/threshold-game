@@ -21,6 +21,7 @@ TutorialManager="*res://scripts/TutorialManager.gd"
 AudioManager="*res://scripts/AudioManager.gd"
 ScoreManager="*res://scripts/ScoreManager.gd"
 CampaignManager="*res://scripts/CampaignManager.gd"
+CRTEffect="*res://scripts/CRTEffect.gd"
 
 [display]
 

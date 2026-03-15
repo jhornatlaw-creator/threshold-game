@@ -39,6 +39,7 @@ var _tutorial_panel: PanelContainer = null  # Tutorial prompt overlay
 var _tutorial_pause_gate: bool = false  # Whether current tutorial prompt requires SPACE
 var _help_expanded: bool = false
 var _pause_menu: PanelContainer = null  # Pause menu overlay
+var _debrief_panel: PanelContainer = null  # Mission debrief overlay
 var _campaign_mission: int = 0  # Current campaign mission number (1-based), 0 = not in campaign
 var _campaign_total: int = 0  # Total campaign missions
 var _campaign_name: String = ""  # Current mission name for campaign header
@@ -98,126 +99,508 @@ func set_campaign_info(mission_num: int, total: int, mission_name: String) -> vo
 		scenario_label.text = "MISSION %d OF %d -- %s" % [mission_num, total, mission_name.to_upper()]
 
 func show_result(result: String) -> void:
-	if result_panel and result_label:
+	# Keep result_panel visible so existing SPACE handler in RenderBridge still works.
+	# result_label is hidden; custom debrief panel renders on top.
+	if result_panel:
 		result_panel.visible = true
-		# Build performance summary
-		var elapsed: float = SimulationWorld.sim_time
-		var e_hours: int = int(elapsed) / 3600
-		var e_minutes: int = (int(elapsed) % 3600) / 60
-		var e_seconds: int = int(elapsed) % 60
-		var elapsed_str: String = "%02d:%02d:%02d" % [e_hours, e_minutes, e_seconds]
-		var player_total: int = 0
-		var player_lost: int = 0
-		var lost_names: Array = []
-		for uid in SimulationWorld.units:
-			var u: Dictionary = SimulationWorld.units[uid]
-			if u.get("faction", "") == "player":
-				player_total += 1
-				if not u["is_alive"]:
-					player_lost += 1
-					var ship_name: String = u.get("name", uid)
-					var displacement: float = u.get("platform", {}).get("displacement_tons", 4000.0)
-					var crew_est: int = int(displacement / 20.0)
-					lost_names.append("%s (%d crew)" % [ship_name, crew_est])
-		var stats: String = "\n\n%s elapsed. %d of %d assets lost." % [elapsed_str, player_lost, player_total]
-		# Campaign: list lost ships with crew estimates
-		if _campaign_mission > 0 and not lost_names.is_empty():
-			stats += "\n"
-			for ln in lost_names:
-				stats += "\n  %s" % ln
-		# Item 15: append score if ScoreManager is tracking
-		var score_text: String = ""
-		if ScoreManager.is_tracking:
-			var time_limit: float = SimulationWorld.scenario.get("victory_condition", {}).get("time_limit_seconds", 0.0)
-			var score_data: Dictionary = ScoreManager.compute_score(SimulationWorld.sim_time, time_limit)
-			score_text = "\n\nGRADE: %s    SCORE: %d\nKills: %d  Losses: %d  Weapons: %d" % [
-				score_data["grade"], score_data["score"],
-				score_data["kills"], score_data["losses"], score_data["weapons_fired"]]
-			ScoreManager.stop_tracking()
-		# Campaign vs standalone hint
-		var restart_hint: String
-		if _campaign_mission > 0:
-			restart_hint = "\n\n[ SPACE to continue to next mission ]"
+	if result_label:
+		result_label.visible = false
+
+	# --- Collect time ---
+	var elapsed: float = SimulationWorld.sim_time
+	var e_hours: int = int(elapsed) / 3600
+	var e_minutes: int = (int(elapsed) % 3600) / 60
+	var e_seconds: int = int(elapsed) % 60
+	var elapsed_str: String = "%02d:%02d:%02d" % [e_hours, e_minutes, e_seconds]
+
+	# --- Collect player force status ---
+	# Array of {name, ok} dicts for the forces section
+	var force_rows: Array = []
+	# Array of "Name (N crew)" strings for ships lost THIS mission
+	var lost_this_mission: Array = []
+	for uid in SimulationWorld.units:
+		var u: Dictionary = SimulationWorld.units[uid]
+		if u.get("faction", "") != "player":
+			continue
+		# Skip helicopters / aircraft
+		var platform_type: String = u.get("platform", {}).get("type", "")
+		if platform_type in ["SH60B", "MPA", "P3C", "HELO"]:
+			continue
+		var ship_name: String = u.get("name", uid)
+		if u["is_alive"]:
+			force_rows.append({"name": ship_name, "ok": true})
 		else:
-			restart_hint = "\n\n[ SPACE to restart ]"
-		# Campaign mission header
-		var campaign_header: String = ""
-		if _campaign_mission > 0:
-			campaign_header = "MISSION %d OF %d COMPLETE\n\n" % [_campaign_mission, _campaign_total]
-		match result:
-			"victory":
-				result_label.text = campaign_header + "THREATS NEUTRALIZED" + stats + score_text + restart_hint
-				result_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.3))
-			"defeat":
-				result_label.text = campaign_header + "TASK FORCE LOST" + stats + score_text + restart_hint
-				result_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
-			"draw":
-				result_label.text = campaign_header + "CONTACTS ESCAPED" + stats + score_text + restart_hint
-				result_label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.3))
-			_:
-				result_label.text = campaign_header + "MISSION ENDED\n" + result + stats + score_text + restart_hint
+			var displacement: float = u.get("platform", {}).get("displacement_tons", 4000.0)
+			var crew_est: int = int(displacement / 20.0)
+			force_rows.append({"name": ship_name, "ok": false})
+			lost_this_mission.append("%s (%d crew)" % [ship_name, crew_est])
+
+	# --- Collect score ---
+	var grade: String = "?"
+	var score: int = 0
+	var kills: int = 0
+	var losses: int = 0
+	var weapons_fired: int = 0
+	var total_enemies: int = ScoreManager.total_enemies
+	if ScoreManager.is_tracking:
+		var time_limit: float = SimulationWorld.scenario.get("victory_condition", {}).get("time_limit_seconds", 0.0)
+		var score_data: Dictionary = ScoreManager.compute_score(SimulationWorld.sim_time, time_limit)
+		grade = score_data["grade"]
+		score = score_data["score"]
+		kills = score_data["kills"]
+		losses = score_data["losses"]
+		weapons_fired = score_data["weapons_fired"]
+		ScoreManager.stop_tracking()
+
+	# Efficiency %: kills / total_enemies, or weapons efficiency
+	var efficiency_pct: int = 100
+	if weapons_fired > 0 and total_enemies > 0:
+		var ideal: int = total_enemies * 2
+		efficiency_pct = clampi(int(float(ideal) / float(weapons_fired) * 100), 0, 100)
+
+	# --- Build the debrief panel ---
+	close_debrief()
+	_debrief_panel = PanelContainer.new()
+	_debrief_panel.name = "DebriefPanel"
+
+	# Center on screen, 600 wide x 500 tall
+	_debrief_panel.anchor_left = 0.5
+	_debrief_panel.anchor_top = 0.5
+	_debrief_panel.anchor_right = 0.5
+	_debrief_panel.anchor_bottom = 0.5
+	_debrief_panel.offset_left = -300.0
+	_debrief_panel.offset_top = -250.0
+	_debrief_panel.offset_right = 300.0
+	_debrief_panel.offset_bottom = 250.0
+	_debrief_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.06, 0.12, 0.97)
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.border_color = Color(0.25, 0.55, 0.85, 0.8)
+	style.corner_radius_top_left = 6
+	style.corner_radius_top_right = 6
+	style.corner_radius_bottom_right = 6
+	style.corner_radius_bottom_left = 6
+	style.content_margin_left = 24.0
+	style.content_margin_top = 20.0
+	style.content_margin_right = 24.0
+	style.content_margin_bottom = 20.0
+	_debrief_panel.add_theme_stylebox_override("panel", style)
+
+	var scroll := ScrollContainer.new()
+	scroll.layout_mode = 1
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_debrief_panel.add_child(scroll)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(vbox)
+
+	# --- Header ---
+	if _campaign_mission > 0:
+		var mission_hdr := Label.new()
+		mission_hdr.text = "MISSION %d OF %d — %s" % [_campaign_mission, _campaign_total, _campaign_name.to_upper()]
+		mission_hdr.add_theme_font_size_override("font_size", 11)
+		mission_hdr.add_theme_color_override("font_color", Color(0.4, 0.5, 0.65))
+		mission_hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		mission_hdr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vbox.add_child(mission_hdr)
+
+	var title_lbl := Label.new()
+	title_lbl.text = "MISSION DEBRIEF"
+	title_lbl.add_theme_font_size_override("font_size", 22)
+	title_lbl.add_theme_color_override("font_color", Color(0.3, 0.8, 1.0))
+	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(title_lbl)
+
+	# Outcome line
+	var outcome_lbl := Label.new()
+	var outcome_color: Color
+	match result:
+		"victory":
+			outcome_lbl.text = "THREATS NEUTRALIZED"
+			outcome_color = Color(0.3, 1.0, 0.3)
+		"defeat":
+			outcome_lbl.text = "TASK FORCE LOST"
+			outcome_color = Color(1.0, 0.3, 0.3)
+		"draw":
+			outcome_lbl.text = "CONTACTS ESCAPED"
+			outcome_color = Color(1.0, 1.0, 0.3)
+		_:
+			outcome_lbl.text = result.to_upper()
+			outcome_color = Color(0.6, 0.7, 0.8)
+	outcome_lbl.add_theme_font_size_override("font_size", 16)
+	outcome_lbl.add_theme_color_override("font_color", outcome_color)
+	outcome_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	outcome_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(outcome_lbl)
+
+	_debrief_add_spacer(vbox, 6)
+
+	# --- SCORE section ---
+	_debrief_add_divider(vbox, "SCORE")
+
+	var grade_score_lbl := Label.new()
+	grade_score_lbl.text = "Grade: %s        Score: %d" % [grade, score]
+	grade_score_lbl.add_theme_font_size_override("font_size", 13)
+	grade_score_lbl.add_theme_color_override("font_color", Color(0.6, 0.7, 0.8))
+	grade_score_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(grade_score_lbl)
+
+	var kills_lbl := Label.new()
+	kills_lbl.text = "Kills: %d/%d        Weapons fired: %d" % [kills, total_enemies, weapons_fired]
+	kills_lbl.add_theme_font_size_override("font_size", 13)
+	kills_lbl.add_theme_color_override("font_color", Color(0.6, 0.7, 0.8))
+	kills_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(kills_lbl)
+
+	var time_eff_lbl := Label.new()
+	time_eff_lbl.text = "Time: %s        Efficiency: %d%%" % [elapsed_str, efficiency_pct]
+	time_eff_lbl.add_theme_font_size_override("font_size", 13)
+	time_eff_lbl.add_theme_color_override("font_color", Color(0.6, 0.7, 0.8))
+	time_eff_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(time_eff_lbl)
+
+	_debrief_add_spacer(vbox, 4)
+
+	# --- FORCES section ---
+	_debrief_add_divider(vbox, "FORCES")
+
+	for row in force_rows:
+		var row_lbl := Label.new()
+		var dots: String = " "
+		# Pad ship name to ~36 chars with dots
+		var name_str: String = row["name"]
+		var pad_len: int = maxi(1, 38 - name_str.length())
+		dots = " " + ".".repeat(pad_len) + " "
+		var status_str: String = "OK" if row["ok"] else "LOST"
+		row_lbl.text = "%s%s%s" % [name_str, dots, status_str]
+		row_lbl.add_theme_font_size_override("font_size", 12)
+		var row_color: Color = Color(0.3, 1.0, 0.3) if row["ok"] else Color(1.0, 0.3, 0.3)
+		row_lbl.add_theme_color_override("font_color", row_color)
+		row_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vbox.add_child(row_lbl)
+
+	# --- Prior campaign losses ---
+	if _campaign_mission > 0 and CampaignManager.campaign_active:
+		var prior_lost: Array = CampaignManager.get_lost_ships()
+		# Filter to ships lost in missions BEFORE this one
+		var prior_only: Array = []
+		for ship in prior_lost:
+			if ship.get("lost_mission", _campaign_mission) < _campaign_mission - 1:
+				prior_only.append(ship)
+		if not prior_only.is_empty():
+			_debrief_add_spacer(vbox, 2)
+			var prior_hdr := Label.new()
+			prior_hdr.text = "Fleet losses to date:"
+			prior_hdr.add_theme_font_size_override("font_size", 11)
+			prior_hdr.add_theme_color_override("font_color", Color(0.5, 0.3, 0.3))
+			prior_hdr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			vbox.add_child(prior_hdr)
+			for ship in prior_only:
+				var sl := Label.new()
+				var sname: String = ship.get("name", "Unknown")
+				var lost_at: int = ship.get("lost_mission", 0) + 1
+				sl.text = "  %s — lost mission %d" % [sname, lost_at]
+				sl.add_theme_font_size_override("font_size", 11)
+				sl.add_theme_color_override("font_color", Color(0.55, 0.35, 0.35))
+				sl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				vbox.add_child(sl)
+
+	_debrief_add_spacer(vbox, 4)
+
+	# --- SITUATION REPORT section ---
+	_debrief_add_divider(vbox, "SITUATION REPORT")
+
+	var narrative: String = _generate_debrief_narrative(result, grade, kills, losses, total_enemies, lost_this_mission)
+	var narr_lbl := Label.new()
+	narr_lbl.text = narrative
+	narr_lbl.add_theme_font_size_override("font_size", 12)
+	narr_lbl.add_theme_color_override("font_color", Color(0.5, 0.6, 0.7))
+	narr_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	narr_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(narr_lbl)
+
+	_debrief_add_spacer(vbox, 8)
+
+	# --- Continue hint ---
+	var hint_text: String = "[ SPACE to continue to next mission ]" if _campaign_mission > 0 else "[ SPACE to restart ]"
+	var hint_lbl := Label.new()
+	hint_lbl.text = hint_text
+	hint_lbl.add_theme_font_size_override("font_size", 12)
+	hint_lbl.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(hint_lbl)
+
+	add_child(_debrief_panel)
+
+
+## Generate a 2-3 sentence narrative for the situation report section.
+func _generate_debrief_narrative(result: String, grade: String, kills: int, losses: int, total_enemies: int, lost_ship_names: Array) -> String:
+	var narrative: String = ""
+
+	match result:
+		"victory":
+			match grade:
+				"S":
+					narrative = "Textbook prosecution. %d hostile contact%s destroyed with zero losses. COMNAVAIRLANT commends Task Force BRAVO's performance. Your crews will be recommended for unit citations." % [kills, "s" if kills != 1 else ""]
+				"A":
+					narrative = "Clean sweep. All hostile contacts neutralized. Minor tactical inefficiencies noted but overall outcome exceeds expectations. Well done, Commander."
+				"B":
+					narrative = "Mission accomplished. Hostile submarine threat eliminated. SACLANT acknowledges satisfactory prosecution of contacts in the operational area."
+				"C":
+					narrative = "Contacts destroyed but at cost. Review of engagement timeline indicates delayed prosecution. Operations staff will schedule debrief for lessons learned."
+				"D":
+					narrative = "Mission technically complete. Significant losses and resource expenditure raise concerns. Expect questions from the review board."
+				_:
+					narrative = "Pyrrhic outcome. While hostile contacts were eventually neutralized, the cost to the task force was unacceptable. A formal inquiry has been ordered."
+		"defeat":
+			narrative = "Task force combat effectiveness destroyed. Surviving crew are being recovered. SACLANT is redirecting assets from STANAVFORLANT to cover the gap. This will be remembered."
+			if not lost_ship_names.is_empty():
+				var first_loss: String = lost_ship_names[0]
+				# Extract just the name part (before the parenthesis)
+				var paren_idx: int = first_loss.find(" (")
+				var ship_display: String = first_loss.substr(0, paren_idx) if paren_idx > 0 else first_loss
+				narrative += "\n\n%s and her crew are gone. The families have been notified." % ship_display
+		"draw":
+			if grade in ["D", "F"]:
+				narrative = "Unacceptable. They came, they passed, and we watched. SACLANT demands explanation."
+			else:
+				narrative = "The contacts slipped through. SOSUS reports transients heading south past the Faroes. COMSUBLANT is repositioning two boats to intercept, but the damage to the barrier is done."
+		_:
+			narrative = "Mission concluded. Full after-action review pending."
+
+	return narrative
+
+
+## Add a styled section divider label to a VBoxContainer.
+func _debrief_add_divider(parent: VBoxContainer, section_title: String) -> void:
+	var lbl := Label.new()
+	lbl.text = "— %s " % section_title + "—".repeat(maxi(1, 30 - section_title.length()))
+	lbl.add_theme_font_size_override("font_size", 11)
+	lbl.add_theme_color_override("font_color", Color(0.25, 0.55, 0.85, 0.8))
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(lbl)
+
+
+## Add a blank spacer of the given pixel height.
+func _debrief_add_spacer(parent: VBoxContainer, height: int) -> void:
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, height)
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(spacer)
+
+
+## Close and free the debrief panel.
+func close_debrief() -> void:
+	if _debrief_panel:
+		_debrief_panel.queue_free()
+		_debrief_panel = null
+
+
+## Returns true if the debrief panel is currently shown.
+func is_debrief_visible() -> bool:
+	return _debrief_panel != null
 
 ## Show campaign complete screen with full debrief.
 func show_campaign_complete(history: Array) -> void:
-	if not result_panel or not result_label:
-		return
-	result_panel.visible = true
+	# Campaign complete is handled by Main.gd's _unhandled_input (SPACE -> main menu).
+	# We build a styled panel here; no result_panel wiring needed.
+	close_debrief()
 
-	var text: String = "CAMPAIGN COMPLETE\nTHE AUTUMN WATCH\n"
-	text += "\n" + "-".repeat(40) + "\n"
-
-	# Grade values for averaging
+	# Compute overall grade
 	var grade_values := {"S": 6, "A": 5, "B": 4, "C": 3, "D": 2, "F": 1}
 	var grade_sum: int = 0
+	var total_score: int = 0
 	var total_losses: int = 0
+	for entry in history:
+		var g: String = entry.get("grade", "F")
+		grade_sum += grade_values.get(g, 1)
+		total_score += entry.get("score", 0)
+		total_losses += entry.get("losses", []).size()
+
+	var overall_grade: String = "F"
+	if history.size() > 0:
+		var avg: float = float(grade_sum) / float(history.size())
+		if avg >= 5.5:
+			overall_grade = "S"
+		elif avg >= 4.5:
+			overall_grade = "A"
+		elif avg >= 3.5:
+			overall_grade = "B"
+		elif avg >= 2.5:
+			overall_grade = "C"
+		elif avg >= 1.5:
+			overall_grade = "D"
+
+	# Build panel
+	_debrief_panel = PanelContainer.new()
+	_debrief_panel.name = "DebriefPanel"
+	_debrief_panel.anchor_left = 0.5
+	_debrief_panel.anchor_top = 0.5
+	_debrief_panel.anchor_right = 0.5
+	_debrief_panel.anchor_bottom = 0.5
+	_debrief_panel.offset_left = -310.0
+	_debrief_panel.offset_top = -270.0
+	_debrief_panel.offset_right = 310.0
+	_debrief_panel.offset_bottom = 270.0
+	_debrief_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.06, 0.12, 0.97)
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.border_color = Color(0.25, 0.55, 0.85, 0.8)
+	style.corner_radius_top_left = 6
+	style.corner_radius_top_right = 6
+	style.corner_radius_bottom_right = 6
+	style.corner_radius_bottom_left = 6
+	style.content_margin_left = 24.0
+	style.content_margin_top = 20.0
+	style.content_margin_right = 24.0
+	style.content_margin_bottom = 20.0
+	_debrief_panel.add_theme_stylebox_override("panel", style)
+
+	var scroll := ScrollContainer.new()
+	scroll.layout_mode = 1
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_debrief_panel.add_child(scroll)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(vbox)
+
+	# Title block
+	var campaign_lbl := Label.new()
+	campaign_lbl.text = "THE AUTUMN WATCH"
+	campaign_lbl.add_theme_font_size_override("font_size", 13)
+	campaign_lbl.add_theme_color_override("font_color", Color(0.4, 0.5, 0.65))
+	campaign_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	campaign_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(campaign_lbl)
+
+	var title_lbl := Label.new()
+	title_lbl.text = "CAMPAIGN COMPLETE"
+	title_lbl.add_theme_font_size_override("font_size", 22)
+	title_lbl.add_theme_color_override("font_color", Color(0.3, 0.8, 1.0))
+	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(title_lbl)
+
+	_debrief_add_spacer(vbox, 4)
+
+	# Overall stats
+	var overall_lbl := Label.new()
+	overall_lbl.text = "Overall Grade: %s        Total Score: %d        Ships Lost: %d" % [overall_grade, total_score, total_losses]
+	overall_lbl.add_theme_font_size_override("font_size", 13)
+	overall_lbl.add_theme_color_override("font_color", Color(0.6, 0.7, 0.8))
+	overall_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	overall_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(overall_lbl)
+
+	_debrief_add_spacer(vbox, 4)
+
+	# --- Mission results table ---
+	_debrief_add_divider(vbox, "MISSION RESULTS")
 
 	for entry in history:
-		var mission_idx: int = entry.get("mission_index", 0)
-		var mission_result: String = entry.get("result", "unknown")
-		var grade: String = entry.get("grade", "?")
-		var score: int = entry.get("score", 0)
-		var losses: Array = entry.get("losses", [])
+		var m_idx: int = entry.get("mission_index", 0)
+		var m_result: String = entry.get("result", "unknown")
+		var m_grade: String = entry.get("grade", "?")
+		var m_score: int = entry.get("score", 0)
+		var m_losses: Array = entry.get("losses", [])
 
-		var result_str: String = mission_result.to_upper()
-		text += "\n  MISSION %d:  %s  GRADE: %s  SCORE: %d" % [mission_idx + 1, result_str, grade, score]
-		if not losses.is_empty():
-			text += "  (%d lost)" % losses.size()
-			total_losses += losses.size()
+		var result_abbr: String
+		var row_color: Color
+		match m_result:
+			"victory":
+				result_abbr = "VICTORY"
+				row_color = Color(0.3, 1.0, 0.3)
+			"defeat":
+				result_abbr = "DEFEAT "
+				row_color = Color(1.0, 0.3, 0.3)
+			"draw":
+				result_abbr = "ESCAPE "
+				row_color = Color(1.0, 1.0, 0.3)
+			_:
+				result_abbr = m_result.substr(0, 7).to_upper()
+				row_color = Color(0.6, 0.7, 0.8)
 
-		grade_sum += grade_values.get(grade, 1)
+		var loss_str: String = "  (%d lost)" % m_losses.size() if not m_losses.is_empty() else ""
+		var row_lbl := Label.new()
+		row_lbl.text = "  Mission %d:  %s   Grade: %s   Score: %d%s" % [m_idx + 1, result_abbr, m_grade, m_score, loss_str]
+		row_lbl.add_theme_font_size_override("font_size", 12)
+		row_lbl.add_theme_color_override("font_color", row_color)
+		row_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vbox.add_child(row_lbl)
 
-	text += "\n\n" + "-".repeat(40)
+	_debrief_add_spacer(vbox, 4)
 
-	# Overall campaign grade
-	if history.size() > 0:
-		var avg_grade_val: float = float(grade_sum) / float(history.size())
-		var overall_grade: String = "F"
-		if avg_grade_val >= 5.5:
-			overall_grade = "S"
-		elif avg_grade_val >= 4.5:
-			overall_grade = "A"
-		elif avg_grade_val >= 3.5:
-			overall_grade = "B"
-		elif avg_grade_val >= 2.5:
-			overall_grade = "C"
-		elif avg_grade_val >= 1.5:
-			overall_grade = "D"
-		text += "\n\nOVERALL GRADE: %s" % overall_grade
-		text += "\nTOTAL SHIPS LOST: %d" % total_losses
-
-	# Lost ships from CampaignManager
+	# --- Fleet casualties ---
 	var lost_ships: Array = CampaignManager.get_lost_ships()
 	if not lost_ships.is_empty():
-		text += "\n"
+		_debrief_add_divider(vbox, "FLEET CASUALTIES")
 		for ship in lost_ships:
-			var ship_name: String = ship.get("name", "Unknown")
+			var sname: String = ship.get("name", "Unknown")
 			var lost_at: int = ship.get("lost_mission", 0) + 1
-			text += "\n  %s -- lost mission %d" % [ship_name, lost_at]
+			var cas_lbl := Label.new()
+			cas_lbl.text = "  %s — lost mission %d" % [sname, lost_at]
+			cas_lbl.add_theme_font_size_override("font_size", 12)
+			cas_lbl.add_theme_color_override("font_color", Color(0.7, 0.35, 0.35))
+			cas_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			vbox.add_child(cas_lbl)
+		_debrief_add_spacer(vbox, 4)
 
-	text += "\n\n[ SPACE to return to mission select ]"
+	# --- Campaign narrative ---
+	_debrief_add_divider(vbox, "ASSESSMENT")
 
-	result_label.text = text
-	result_label.add_theme_color_override("font_color", Color(0.6, 0.8, 1.0))
+	var campaign_narrative: String = _generate_campaign_narrative(overall_grade, total_losses, history.size())
+	var narr_lbl := Label.new()
+	narr_lbl.text = campaign_narrative
+	narr_lbl.add_theme_font_size_override("font_size", 12)
+	narr_lbl.add_theme_color_override("font_color", Color(0.5, 0.6, 0.7))
+	narr_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	narr_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(narr_lbl)
+
+	_debrief_add_spacer(vbox, 8)
+
+	var hint_lbl := Label.new()
+	hint_lbl.text = "[ SPACE to return to mission select ]"
+	hint_lbl.add_theme_font_size_override("font_size", 12)
+	hint_lbl.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(hint_lbl)
+
+	add_child(_debrief_panel)
+
+
+## Generate a campaign-end assessment narrative based on overall grade and losses.
+func _generate_campaign_narrative(overall_grade: String, total_losses: int, mission_count: int) -> String:
+	match overall_grade:
+		"S":
+			return "Flawless execution across all %d missions. The GIUK barrier held without a single loss. SACLANT has forwarded commendations for all task force commanders. This is what it means to own the Atlantic." % mission_count
+		"A":
+			return "The campaign is concluded with distinction. Hostile submarine activity in the operational area has been suppressed. Minor friction noted in a handful of engagements, but the outcome was never in doubt. Well executed."
+		"B":
+			return "The Autumn Watch is over. The task force performed adequately across the campaign. Barrier integrity was maintained at acceptable cost. Lessons will be incorporated into the next rotation's training syllabus."
+		"C":
+			return "A qualified success. The barrier held, but %d ships and their crews did not come home. SACLANT will review the engagements where prosecution was delayed. The margin for error in the real North Atlantic is thinner than this." % total_losses
+		"D":
+			return "The campaign achieved its minimum objectives at significant cost. %d ships lost. The task force's operational effectiveness was compromised. A comprehensive review has been ordered. SACLANT expects a full accounting." % total_losses
+		_:
+			return "The campaign is over, but at unacceptable cost. %d ships lost. STANAVFORLANT is repositioning to compensate for the gap this task force has left behind. The families of %d lost crews have been notified. This result will not be forgotten." % [total_losses, total_losses]
 
 func update_time_scale(new_scale: float) -> void:
 	_current_time_scale = new_scale
