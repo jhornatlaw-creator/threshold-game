@@ -16,4 +16,6 @@ If no entry for 14 consecutive days, project is stalled. Review and either push 
 | 2026-03-15 | 6     | 10         | Difficulty selection, pause menu, export config, beta docs, settings | Gate 2 |
 | 2026-03-15 | 4     | 14         | CRT shader, mission debrief screen, 4 skirmish scenarios, weather system, v0.3 build + release | Gate 2 |
 | 2026-03-15 | 4     | 18         | Minimap, sonobuoys, helo fuel/RTB, ambient audio, weather HUD, waypoint routes, v0.4 release | Gate 2 |
-| 2026-03-15 | 2     | 20         | QA sweep: 9 bugs fixed (radar div-by-zero crash, dual sea state sync, RTB tracking, helo recovery, sonobuoy throttle), v0.5 build | Gate 2 |
+| 2026-03-15 | 2     | 20         | QA round 1: 10 bugs fixed (radar crash, sea state sync, RTB tracking, helo recovery) | Gate 2 |
+| 2026-03-15 | 2     | 22         | QA round 2: 8 more bugs fixed (PCK skirmish visibility, bearing display, difficulty scaling, audio lifecycle, pause guards, campaign flow), v0.5 release | Gate 2 |
+| 2026-03-15 | 3     | 25         | v0.6: merchant vessel platform, P-700 Granit flight profile differentiation, score difficulty multipliers, Cold Passage maintain_contact rewrite, convoy escort platform swap | Gate 2 |

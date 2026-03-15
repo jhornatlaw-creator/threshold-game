@@ -1491,11 +1491,16 @@ func _compute_weapon_hit(w: Dictionary, target: Dictionary) -> bool:
 	var cm_source: Dictionary = target.get("override_countermeasures", target["platform"])
 	var cm_factor: float = 1.0
 	if cm_source.get("has_ciws", false):
-		cm_factor *= 0.6  # CIWS reduces Pk by 40%
+		# Supersonic missiles (high_dive profile) reduce CIWS effectiveness
+		var ciws_mult: float = wdata.get("ciws_effectiveness_mult", 1.0)
+		cm_factor *= 0.6 * ciws_mult if ciws_mult < 1.0 else 0.6
 	if cm_source.get("has_chaff", false) and wdata.get("guidance", "") == "radar":
 		cm_factor *= 0.7  # Chaff vs radar-guided
 	if cm_source.get("has_decoy", false) and wdata.get("type", "") == "torpedo":
 		cm_factor *= 0.75  # Acoustic decoys vs torpedoes
+
+	# Flight profile bonus (supersonic high-dive missiles are harder to defend)
+	var profile_bonus: float = wdata.get("pk_profile_bonus", 0.0)
 
 	# Speed factor for torpedoes (faster targets harder to hit)
 	var speed_factor: float = 1.0
@@ -1504,7 +1509,7 @@ func _compute_weapon_hit(w: Dictionary, target: Dictionary) -> bool:
 		if target_speed > 20.0:
 			speed_factor = clampf(1.0 - (target_speed - 20.0) / 40.0, 0.4, 1.0)
 
-	var final_pk: float = base_pk * range_factor * cm_factor * speed_factor
+	var final_pk: float = clampf(base_pk + profile_bonus, 0.0, 0.95) * range_factor * cm_factor * speed_factor
 
 	# Item 16: difficulty scaling -- player Pk multiplier
 	var shooter_id: String = w.get("shooter_id", "")

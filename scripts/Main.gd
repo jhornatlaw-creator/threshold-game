@@ -168,7 +168,7 @@ func _on_scenario_ended_campaign(result: String) -> void:
 
 	# Compute score before ScoreManager.stop_tracking is called by HUD.show_result
 	var time_limit: float = SimulationWorld.scenario.get("victory_condition", {}).get("time_limit_seconds", 0.0)
-	var score_data: Dictionary = ScoreManager.compute_score(SimulationWorld.sim_time, time_limit)
+	var score_data: Dictionary = ScoreManager.compute_score(SimulationWorld.sim_time, time_limit, ScenarioLoader.get_score_multiplier())
 
 	# Collect lost and surviving player units
 	var lost := []

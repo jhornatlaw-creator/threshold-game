@@ -13,6 +13,16 @@ const DIFFICULTY_PARAMS := {
 	"ELITE":  { "detection_mult": 0.5, "player_pk_mult": 0.7, "ai_attack_threshold": 0.15 },
 }
 
+const SCORE_MULTIPLIERS := {
+	"EASY":   0.70,
+	"NORMAL": 1.00,
+	"HARD":   1.30,
+	"ELITE":  1.60,
+}
+
+func get_score_multiplier() -> float:
+	return SCORE_MULTIPLIERS.get(selected_difficulty, 1.0)
+
 
 ## Injects the selected difficulty params into scenario_data["difficulty"].
 ## Scenario-level overrides take precedence — menu selection only fills gaps.

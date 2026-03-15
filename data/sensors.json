@@ -207,6 +207,17 @@
       "max_range_nm_passive": 8,
       "frequency_khz": 10.0,
       "description": "Soviet helicopter dipping sonar. Lower performance than Western counterparts."
+    },
+    {
+      "id": "nav_radar_commercial",
+      "name": "Commercial Navigation Radar",
+      "type": "radar",
+      "subtype": "navigation",
+      "peak_power_kw": 25,
+      "max_range_nm": 24,
+      "frequency_band": "X",
+      "scan_rate_rpm": 24,
+      "description": "Standard commercial marine navigation radar. Short range, low power. No fire control capability."
     }
   ]
 }

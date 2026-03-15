@@ -274,6 +274,29 @@
       "weapons": ["set65_torpedo"],
       "sensors": ["ans_dipping_soviet"],
       "description": "Soviet shipborne ASW helicopter. Dipping sonar and torpedoes. Carried on Udaloy (x2) and Kirov."
+    },
+    {
+      "id": "merchant_vessel",
+      "name": "Merchant Vessel",
+      "class_name": "General Cargo Ship",
+      "type": "MV",
+      "faction_default": "neutral",
+      "displacement_tons": 12000,
+      "max_speed_kts": 16,
+      "crew": 28,
+      "commissioned_year": 1978,
+      "rcs_m2": 8000,
+      "noise_db_cruise": 155,
+      "target_strength_db": 28,
+      "has_ciws": false,
+      "has_chaff": false,
+      "has_decoy": false,
+      "has_ecm": false,
+      "has_esm": false,
+      "antenna_height_ft": 40,
+      "weapons": [],
+      "sensors": ["nav_radar_commercial"],
+      "description": "Unarmed civilian cargo vessel. High noise signature. Large radar cross-section. No defensive capability. Must be protected by escorts."
     }
   ]
 }

@@ -28,7 +28,7 @@ func record_weapon_fired() -> void:
 	if is_tracking:
 		weapons_fired += 1
 
-func compute_score(sim_time: float, time_limit: float) -> Dictionary:
+func compute_score(sim_time: float, time_limit: float, difficulty_mult: float = 1.0) -> Dictionary:
 	var kill_bonus: int = kills * 300
 	var speed_bonus: int = 0
 	if time_limit > 0 and sim_time < time_limit:
@@ -37,8 +37,8 @@ func compute_score(sim_time: float, time_limit: float) -> Dictionary:
 	var efficiency_penalty: int = maxi(0, (weapons_fired - efficiency_floor) * 20)
 	var loss_penalty: int = losses * 400
 
-	var score: int = 1000 + kill_bonus + speed_bonus - efficiency_penalty - loss_penalty
-	score = maxi(score, 0)
+	var raw_score: int = 1000 + kill_bonus + speed_bonus - efficiency_penalty - loss_penalty
+	var score: int = maxi(int(raw_score * difficulty_mult), 0)
 
 	var grade: String = "F"
 	if score >= 1620:

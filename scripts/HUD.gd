@@ -177,7 +177,7 @@ func show_result(result: String) -> void:
 	var total_enemies: int = ScoreManager.total_enemies
 	if ScoreManager.is_tracking:
 		var time_limit: float = SimulationWorld.scenario.get("victory_condition", {}).get("time_limit_seconds", 0.0)
-		var score_data: Dictionary = ScoreManager.compute_score(SimulationWorld.sim_time, time_limit)
+		var score_data: Dictionary = ScoreManager.compute_score(SimulationWorld.sim_time, time_limit, ScenarioLoader.get_score_multiplier())
 		grade = score_data["grade"]
 		score = score_data["score"]
 		kills = score_data["kills"]

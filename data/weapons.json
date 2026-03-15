@@ -130,7 +130,9 @@
       "loadout_default": 20,
       "min_range_nm": 10,
       "flight_profile": "high_dive",
-      "description": "Supersonic anti-ship cruise missile. Mach 2.5 with 750kg warhead. Primary armament of Kirov-class. Inertial midcourse with active radar terminal homing."
+      "ciws_effectiveness_mult": 0.25,
+      "pk_profile_bonus": 0.10,
+      "description": "Supersonic anti-ship cruise missile. Mach 2.5 with 750kg warhead. Primary armament of Kirov-class. Inertial midcourse with active radar terminal homing. Extreme speed makes CIWS intercept nearly impossible."
     },
     {
       "id": "rpk6_vodopad",

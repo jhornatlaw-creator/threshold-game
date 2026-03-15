@@ -56,7 +56,7 @@
     },
     {
       "id": "CONVOY_LEAD",
-      "platform_id": "ffg_oliver_hazard_perry",
+      "platform_id": "merchant_vessel",
       "name": "MV Atlantic Conveyor",
       "faction": "player",
       "x": 0.0,
@@ -67,7 +67,7 @@
     },
     {
       "id": "CONVOY_TRAIL",
-      "platform_id": "ffg_oliver_hazard_perry",
+      "platform_id": "merchant_vessel",
       "name": "MV Nordic Ferry",
       "faction": "player",
       "x": -8.0,
