@@ -1,6 +1,7 @@
 {
   "name": "Torpedo Alley",
   "description": "Three Akula-class submarines are threading the Denmark Strait in column. Close the trap.",
+  "timeline": "torpedo_alley",
   "briefing": "CLASSIFICATION: SECRET\n\nTO: Commander, Strike Group WHISKEY\nFROM: COMSUBNORLANT INTEL WATCH\nDTG: 121400Z OCT 1985\n\nThree contacts. Akula-class. Transiting the Denmark Strait in column formation. Running shallow, running fast. Probably repositioning to support North Sea operations.\n\nThe strait is 180 miles wide but the safe lane is 40. Biologics are dense. Bottom bounce is everywhere. Detection ranges are degraded by at least forty percent.\n\nUSS Bremerton (SSN-698) is already in the water ahead of them, holding position below the thermal layer. She knows they're coming. They don't know she's there.\n\nUSS Spruance (DD-963) is racing south from the Greenland coast to cut off retreat. She will not arrive clean.\n\nThis will be close. It will be ugly. The strait is narrow enough that someone is going to take a torpedo in the first ten minutes.\n\nDo not let it be you.\n\nRules of engagement: weapons free on confirmed hostile subsurface contacts.",
   "environment": {
     "sea_state": 5,

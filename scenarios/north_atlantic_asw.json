@@ -1,6 +1,7 @@
 {
   "name": "North Atlantic ASW Patrol",
   "description": "A small US Navy surface task force patrols the GIUK Gap. Intelligence reports indicate 1-2 Soviet submarines operating in the area. Find them. Sink them. Don't lose the task force.",
+  "timeline": "north_atlantic_asw",
   "briefing": "CLASSIFICATION: SECRET\n\nTO: Commander, Task Force BRAVO\nFROM: COMNAVAIRLANT INTEL WATCH\nDTG: 060400Z NOV 1985\n\nTwo contacts. Akula-class. Transited the GIUK Gap eighteen hours ago heading south.\nWe lost them in the thermal layer east of the Reykjanes Ridge.\n\nThey know the Gap. They've done this before.\n\nYour assets: USS Kidd (DDG), USS Elrod (FFG), USS Jacksonville (SSN).\nJacksonville is operating independently — keep her inside your sensor net.\n\nSurface radar is your liability. The moment you go active on sonar, you tell them where you are.\nThey will not hesitate.\n\nFind them before they find you.\n\nRules of engagement: weapons free on confirmed hostile subsurface contacts.",
   "environment": {
     "sea_state": 4,

@@ -19,3 +19,4 @@ If no entry for 14 consecutive days, project is stalled. Review and either push 
 | 2026-03-15 | 2     | 20         | QA round 1: 10 bugs fixed (radar crash, sea state sync, RTB tracking, helo recovery) | Gate 2 |
 | 2026-03-15 | 2     | 22         | QA round 2: 8 more bugs fixed (PCK skirmish visibility, bearing display, difficulty scaling, audio lifecycle, pause guards, campaign flow), v0.5 release | Gate 2 |
 | 2026-03-15 | 3     | 25         | v0.6: merchant vessel platform, P-700 Granit flight profile differentiation, score difficulty multipliers, Cold Passage maintain_contact rewrite, convoy escort platform swap | Gate 2 |
+| 2026-03-15 | 3     | 28         | v0.7: Dialogic plugin integration, NarrativeDirector autoload, 6 mission briefing timelines (COMMS/INTEL/COMMAND voices), SPACE key conflict guard, safe fallback when plugin disabled | Gate 2 |

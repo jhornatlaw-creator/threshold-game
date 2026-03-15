@@ -564,6 +564,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				if not _gameplay_blocked:
 					_handle_fire_weapon()
 			KEY_SPACE:
+				# Narrative guard: SPACE does nothing during Dialogic sequences
+				if NarrativeDirector.is_playing():
+					return
 				# Tutorial prompt gate: dismiss tutorial panel on SPACE
 				if hud and hud.has_method("has_tutorial_prompt") and hud.has_tutorial_prompt():
 					hud.dismiss_tutorial_prompt()

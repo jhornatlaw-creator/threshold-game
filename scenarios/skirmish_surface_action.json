@@ -1,6 +1,7 @@
 {
   "name": "Surface Action",
   "description": "A Kirov-class battlecruiser and two Udaloy escorts have broken out of the Norwegian Sea heading south. Stop them.",
+  "timeline": "surface_action",
   "briefing": "CLASSIFICATION: SECRET -- FLASH\n\nTO: Commander, Surface Action Group TANGO\nFROM: SACLANT\nDTG: 141030Z NOV 1985\n\nFLASH priority.\n\nKirov-class battlecruiser, hull designation ADMIRAL USHAKOV, with two Udaloy escorts departed Severomorsk eighteen hours ago. They are now in the Norwegian Sea heading south at 28 knots. No clear tactical objective has been established. That is what concerns us.\n\nThe Kirov carries 20 P-700 Granit anti-ship cruise missiles. Range exceeds 300 nautical miles. Each one is designed to mission-kill a cruiser. At Mach 1.6, they do not miss.\n\nYou have three surface combatants. You do not have a submarine. You do not have fixed-wing air cover. What you have is Harpoon, SM-2, and the knowledge that their defensive systems can be saturated if you coordinate the strike properly.\n\nClose to Harpoon range. Coordinate your firing sequence. Saturate their Kashtan and SA-N-6. If they launch helicopters, SM-2.\n\nThis is not the engagement anybody planned for. Surface actions at this scale have not happened since the Falklands.\n\nMake it count.\n\nRules of engagement: weapons free.",
   "environment": {
     "sea_state": 3,

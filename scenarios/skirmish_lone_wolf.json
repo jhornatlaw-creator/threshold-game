@@ -1,6 +1,7 @@
 {
   "name": "Lone Wolf",
   "description": "USS Jacksonville alone in a 60x60 NM deep-water patrol box. Two Akulas are in there somewhere. Find them.",
+  "timeline": "lone_wolf",
   "briefing": "CLASSIFICATION: SECRET\n\nTO: Commanding Officer, USS Jacksonville (SSN-699)\nFROM: COMSUBNORLANT\nDTG: 090300Z NOV 1985\n\nUSS Jacksonville. Alone and unafraid.\n\nSOSUS detected two contacts passing through the GIUK Gap 36 hours ago. Bearing tracks put them somewhere in your patrol box -- a 60-by-60 nautical mile square of deep Atlantic. They're deep, they're quiet, and they're not in a hurry.\n\nYou have Mk48 ADCAP torpedoes and patience. No surface support. No air cover. No second chances.\n\nFind them. Kill them. Come home.\n\nIntel assessment: both contacts are Akula-class. One may be running a racetrack pattern. The other has been inconsistent -- possible sprint-and-drift. Do not assume you have their position. You do not.\n\nStanding orders: maintain below the thermal layer. Go active only if you have a firing solution. One ping, one kill.\n\nThe convergence zone is your friend. Use it before they do.",
   "environment": {
     "sea_state": 2,

@@ -96,7 +96,13 @@ func _start_scenario(scenario_data: Dictionary) -> void:
 			TutorialManager.activate(hud, render_bridge)
 	else:
 		# Normal mode: show briefing, set time limit, auto-select first player unit
-		if hud and hud.has_method("show_briefing"):
+		# Try Dialogic narrative briefing first; fall back to HUD text overlay
+		var timeline_id: String = scenario_data.get("timeline", "")
+		var used_dialogic: bool = false
+		if timeline_id != "" and NarrativeDirector._has_dialogic():
+			NarrativeDirector.play_briefing(scenario_data)
+			used_dialogic = NarrativeDirector.is_playing()
+		if not used_dialogic and hud and hud.has_method("show_briefing"):
 			var briefing_text: String = scenario_data.get("briefing", "")
 			if briefing_text != "":
 				briefing_text += "\n\nTIP: Press 2-5 to increase time compression."

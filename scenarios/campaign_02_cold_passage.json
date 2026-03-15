@@ -1,6 +1,7 @@
 {
   "name": "Cold Passage",
   "description": "A Soviet surface group is transiting south through the Norwegian Sea. Shadow them. Do not lose contact.",
+  "timeline": "cold_passage",
   "briefing": "CLASSIFICATION: SECRET\n\nTO: Commander, Patrol Group DELTA\nFROM: COMNAVAIRLANT\nDTG: 121400Z NOV 1985\n\nSoviet surface group — one Kirov-class, two Udaloy escorts — transiting the Norwegian Sea on heading 210.\n\nYour orders: shadow the formation. Maintain continuous sensor contact for 45 minutes. Do not close inside 30 NM.\n\nOne of the Udaloys broke formation twenty minutes ago and is sprinting toward your last reported position. They are not lost. They know exactly where you are.\n\nWeapons free only if fired upon. Your mission is intelligence — not engagement. Keep eyes on the Kirov.\n\nTIP: Press 2-5 to increase time compression.",
   "campaign_mission": 2,
   "environment": {

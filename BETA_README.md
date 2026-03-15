@@ -1,4 +1,4 @@
-# THRESHOLD v0.6-beta
+# THRESHOLD v0.7-beta
 
 Cold War naval warfare simulation — command US surface ships and submarines in the North Atlantic, hunting Soviet contacts before they slip through.
 
@@ -47,6 +47,7 @@ Double-click `THRESHOLD.exe`. No install required.
 - **Cold Passage (Campaign Mission 2)** — This is now a maintain_contact mission. Shadow the Soviet group for 45 minutes without losing sensor contact. Watch the tracking progress bar.
 - **P-700 Granit missiles** — Soviet Kirov fires supersonic missiles that are very hard for CIWS to stop. Expect higher hit rates vs your ships.
 - **Score difficulty scaling** — Play the same scenario on Easy vs Hard. Hard should produce higher scores for the same performance.
+- **Dialogic narrative briefings** — After enabling the Dialogic plugin, missions show transmission-style briefings with COMMS, INTEL, and COMMAND voices instead of static text. Press Enter to advance. Missions without Dialogic enabled fall back to the text overlay.
 - **Minimap** — Press M to toggle the tactical minimap in the bottom-right corner. Shows all known contacts and own forces.
 - **Sonobuoys** — Select a P-3C or helicopter and press B to drop a sonobuoy. Verify it detects nearby submarines and expires after ~40 minutes.
 - **Helicopter fuel** — Launch a helicopter and watch fuel drain. At 10% it should auto-RTB. Verify it lands and can be relaunched.
@@ -66,4 +67,4 @@ Include: what you were doing, what happened, and what you expected to happen. Sc
 
 ## Version
 
-v0.6-beta — 2026-03-15
+v0.7-beta — 2026-03-15
