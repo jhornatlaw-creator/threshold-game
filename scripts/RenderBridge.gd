@@ -153,7 +153,7 @@ func _on_unit_detected(detector_id: String, target_id: String, detection: Dictio
 		var det_pos: Vector2 = detector_data.get("position", Vector2.ZERO)
 		var bearing_rad: float = deg_to_rad(detection.get("bearing", 0.0))
 		var range_est: float = detection.get("range_est", 10.0)
-		var est_pos: Vector2 = det_pos + Vector2(sin(bearing_rad), cos(bearing_rad)) * range_est
+		var est_pos: Vector2 = det_pos + Vector2(sin(bearing_rad), -cos(bearing_rad)) * range_est
 		visual.position = est_pos * NM_TO_PX
 		# Update label to show designator (Item 6: restore alpha from LK fade)
 		var classification: Dictionary = detection.get("classification", {})
@@ -170,7 +170,7 @@ func _on_unit_detected(detector_id: String, target_id: String, detection: Dictio
 		var det_pos: Vector2 = detector_data.get("position", Vector2.ZERO)
 		var bearing_rad: float = deg_to_rad(detection.get("bearing", 0.0))
 		var range_est: float = detection.get("range_est", 10.0)
-		var pos: Vector2 = det_pos + Vector2(sin(bearing_rad), cos(bearing_rad)) * range_est
+		var pos: Vector2 = det_pos + Vector2(sin(bearing_rad), -cos(bearing_rad)) * range_est
 		contact_visual.position = pos * NM_TO_PX
 		units_layer.add_child(contact_visual)
 		_unit_visuals[target_id] = contact_visual
@@ -557,9 +557,12 @@ func _unhandled_input(event: InputEvent) -> void:
 				_zoom_camera(0.9)
 
 	elif event is InputEventKey and event.pressed:
+		# Block gameplay commands during pause/debrief/briefing (UI keys still work below)
+		var _gameplay_blocked: bool = SimulationWorld.is_paused or _result_shown
 		match event.keycode:
 			KEY_F:
-				_handle_fire_weapon()
+				if not _gameplay_blocked:
+					_handle_fire_weapon()
 			KEY_SPACE:
 				# Tutorial prompt gate: dismiss tutorial panel on SPACE
 				if hud and hud.has_method("has_tutorial_prompt") and hud.has_tutorial_prompt():
@@ -591,7 +594,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_5:
 				SimulationWorld.set_time_scale(60.0)
 			KEY_R:
-				if _selected_unit_id != "":
+				if not _gameplay_blocked and _selected_unit_id != "":
 					var u: Dictionary = SimulationWorld.units.get(_selected_unit_id, {})
 					var new_radar: bool = not u.get("emitting_radar", false)
 					SimulationWorld.set_unit_radar(_selected_unit_id, new_radar)
@@ -599,7 +602,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					if hud and hud.has_method("show_message"):
 						hud.show_message("RADAR: %s" % ("ON" if new_radar else "OFF"), 1.5)
 			KEY_S:
-				if _selected_unit_id != "":
+				if not _gameplay_blocked and _selected_unit_id != "":
 					var u: Dictionary = SimulationWorld.units.get(_selected_unit_id, {})
 					var new_sonar: bool = not u.get("emitting_sonar_active", false)
 					SimulationWorld.set_unit_sonar_active(_selected_unit_id, new_sonar)
@@ -611,7 +614,7 @@ func _unhandled_input(event: InputEvent) -> void:
 						AudioManager.play_sonar_ping()
 			KEY_L:
 				# Launch helicopter from selected ship
-				if _selected_unit_id != "" and _selected_unit_id in SimulationWorld.units:
+				if not _gameplay_blocked and _selected_unit_id != "" and _selected_unit_id in SimulationWorld.units:
 					var u: Dictionary = SimulationWorld.units[_selected_unit_id]
 					var platform: Dictionary = u.get("platform", {})
 					if platform.get("helicopter_type", "") != "":
@@ -640,7 +643,7 @@ func _unhandled_input(event: InputEvent) -> void:
 						hud.show_message("MINIMAP: %s" % ("ON" if Minimap.enabled else "OFF"), 2.0)
 			KEY_B:
 				# Drop sonobuoy from selected aircraft
-				if _selected_unit_id != "" and _selected_unit_id in SimulationWorld.units:
+				if not _gameplay_blocked and _selected_unit_id != "" and _selected_unit_id in SimulationWorld.units:
 					var u: Dictionary = SimulationWorld.units[_selected_unit_id]
 					if u.get("is_airborne", false):
 						var buoy_id: String = SimulationWorld.deploy_sonobuoy(_selected_unit_id)
@@ -656,24 +659,25 @@ func _unhandled_input(event: InputEvent) -> void:
 						if hud and hud.has_method("show_message"):
 							hud.show_message("MUST BE AIRBORNE TO DROP SONOBUOYS", 2.0)
 			KEY_TAB:
-				_cycle_player_unit()  # M-6: Tab cycles through player units
+				if not _gameplay_blocked:
+					_cycle_player_unit()  # M-6: Tab cycles through player units
 			KEY_ESCAPE:
 				_handle_escape()  # N-7: Escape to restart/quit
 			KEY_W:
-				# MA-2: increase speed by 5 kts
-				_adjust_unit_speed(5.0)
+				if not _gameplay_blocked:
+					_adjust_unit_speed(5.0)
 			KEY_X:
-				# MA-2: decrease speed by 5 kts
-				_adjust_unit_speed(-5.0)
+				if not _gameplay_blocked:
+					_adjust_unit_speed(-5.0)
 			KEY_BRACKETLEFT:
-				# MA-3: go shallower by 25m (only subs)
-				_adjust_unit_depth(25.0)
+				if not _gameplay_blocked:
+					_adjust_unit_depth(25.0)
 			KEY_BRACKETRIGHT:
-				# MA-3: go deeper by 25m (only subs)
-				_adjust_unit_depth(-25.0)
+				if not _gameplay_blocked:
+					_adjust_unit_depth(-25.0)
 			KEY_C:
-				# Cycle weapon selection
-				_cycle_weapon()
+				if not _gameplay_blocked:
+					_cycle_weapon()
 			KEY_H:
 				# Fix 8: recenter camera on centroid of alive player units
 				_recenter_camera()

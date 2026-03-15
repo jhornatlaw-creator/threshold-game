@@ -289,9 +289,16 @@ func _list_scenarios() -> Array:
 			fname = dir.get_next()
 		dir.list_dir_end()
 	# Fallback: DirAccess cannot enumerate files inside a packed PCK in release exports.
-	# Use the known campaign missions list to ensure scenarios are always available.
+	# Use known scenario lists to ensure all scenarios are available.
 	if results.is_empty():
-		for path in CAMPAIGN_MISSIONS:
+		var all_known: Array = CAMPAIGN_MISSIONS.duplicate()
+		all_known.append_array([
+			"res://scenarios/skirmish_torpedo_alley.json",
+			"res://scenarios/skirmish_convoy_escort.json",
+			"res://scenarios/skirmish_surface_action.json",
+			"res://scenarios/skirmish_lone_wolf.json",
+		])
+		for path in all_known:
 			if FileAccess.file_exists(path):
 				results.append(path)
 	results.sort()

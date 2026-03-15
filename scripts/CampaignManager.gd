@@ -42,18 +42,22 @@ func record_mission_result(result: String, score: int, grade: String, units_lost
 		"losses": units_lost,
 	})
 
-	# Update fleet status -- mark lost ships
+	# Update fleet status -- mark lost ships (including first-mission units)
 	for unit_id in units_lost:
 		if unit_id in fleet_status:
 			fleet_status[unit_id]["alive"] = false
 			fleet_status[unit_id]["lost_mission"] = current_mission
+		else:
+			fleet_status[unit_id] = {"alive": false, "damage": 1.0, "name": unit_id, "class": "", "lost_mission": current_mission}
 
 	# Update surviving ships
 	for uid in units_surviving:
 		if uid not in fleet_status:
 			fleet_status[uid] = {"alive": true, "damage": 0.0, "name": uid, "class": ""}
 
-	current_mission += 1
+	# Only advance on victory — defeat/draw means retry the same mission
+	if result == "victory":
+		current_mission += 1
 	_save()
 	campaign_updated.emit()
 

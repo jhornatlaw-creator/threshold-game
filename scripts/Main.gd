@@ -29,7 +29,7 @@ func _ready() -> void:
 			hud = render_bridge.find_child("HUD", true, false) if render_bridge else null
 			if hud and hud.has_method("show_campaign_complete"):
 				hud.show_campaign_complete(CampaignManager.mission_history)
-			CampaignManager.reset_campaign()
+			# Campaign reset deferred to SPACE press so player can view results
 			return
 		scenario_path = CampaignManager.get_current_mission_path()
 		if scenario_path == "":
@@ -50,6 +50,7 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if _campaign_complete_shown and event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
 		_campaign_complete_shown = false
+		CampaignManager.reset_campaign()
 		get_tree().change_scene_to_file("res://scenes/mainmenu.tscn")
 
 func _start_scenario_from_path(scenario_path: String) -> void:
@@ -60,7 +61,9 @@ func _start_scenario_from_path(scenario_path: String) -> void:
 	_start_scenario(scenario_data)
 
 func _start_scenario(scenario_data: Dictionary) -> void:
+	AudioManager.reset()
 	SimulationWorld.load_scenario(scenario_data)
+	AudioManager.start_ocean_ambience()
 
 	# Campaign: filter out ships lost in prior missions
 	if CampaignManager.campaign_active:

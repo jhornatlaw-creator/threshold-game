@@ -15,13 +15,14 @@ const DIFFICULTY_PARAMS := {
 
 
 ## Injects the selected difficulty params into scenario_data["difficulty"].
-## Existing scenario-level overrides are preserved when not overwritten.
+## Scenario-level overrides take precedence — menu selection only fills gaps.
 func apply_difficulty(data: Dictionary) -> Dictionary:
 	var params: Dictionary = DIFFICULTY_PARAMS.get(selected_difficulty, DIFFICULTY_PARAMS["NORMAL"])
 	if not data.has("difficulty"):
 		data["difficulty"] = {}
 	for key in params:
-		data["difficulty"][key] = params[key]
+		if not data["difficulty"].has(key):
+			data["difficulty"][key] = params[key]
 	return data
 
 func load_scenario_file(path: String) -> Dictionary:

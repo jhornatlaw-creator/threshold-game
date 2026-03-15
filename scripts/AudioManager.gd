@@ -42,8 +42,7 @@ const SAMPLE_RATE: int = 22050
 func _ready() -> void:
 	_generate_all_streams()
 	_create_players()
-	# Start ambient after a short delay to avoid startup conflicts
-	call_deferred("start_ocean_ambience")
+	# Ocean ambience starts when scenario loads, not at boot
 
 func _process(delta: float) -> void:
 	if not SimulationWorld.is_paused and SimulationWorld.tick_count > 0:
@@ -381,6 +380,20 @@ func play_missile_away() -> void:
 		_player_missile.play()
 
 ## Start the ambient ocean loop. Called once when scenario loads.
+## Reset all audio state between missions. Call on scenario load/exit.
+func reset() -> void:
+	stop_ocean_ambience()
+	stop_torpedo_warning()
+	if _player_sonar: _player_sonar.stop()
+	if _player_contact: _player_contact.stop()
+	if _player_weapon: _player_weapon.stop()
+	if _player_explosion: _player_explosion.stop()
+	if _player_missile: _player_missile.stop()
+	if _player_radio: _player_radio.stop()
+	if _player_sonar_return: _player_sonar_return.stop()
+	_radio_timer = 0.0
+	_radio_interval = 60.0
+
 func start_ocean_ambience() -> void:
 	if _player_ocean and _stream_ocean_loop:
 		_player_ocean.stream = _stream_ocean_loop
