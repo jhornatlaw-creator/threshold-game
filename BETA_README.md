@@ -44,9 +44,8 @@ Double-click `THRESHOLD.exe`. No install required.
 
 ## Bug Reports
 
-If you find a bug, please report it here: [Google Form link — placeholder]
-
-Or email: [email placeholder]
+If you find a bug, open an issue at:
+https://github.com/jhornatlaw-creator/threshold-game/issues
 
 Include: what you were doing, what happened, and what you expected to happen. Screenshots help.
 
