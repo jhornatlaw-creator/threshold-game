@@ -133,7 +133,7 @@ class _MinimapControl extends Control:
 					pos + Vector2(0.0, s),
 					pos + Vector2(-s, 0.0),
 				])
-				draw_colored_polygon(pts, PackedColorArray([color, color, color, color]))
+				draw_colored_polygon(pts, color)
 			"MPA", "HELO":
 				# Aircraft: small upward triangle
 				var s := 4.0
@@ -142,7 +142,7 @@ class _MinimapControl extends Control:
 					pos + Vector2(s, s * 0.6),
 					pos + Vector2(-s, s * 0.6),
 				])
-				draw_colored_polygon(pts, PackedColorArray([color, color, color]))
+				draw_colored_polygon(pts, color)
 			_:
 				# Surface ships (DDG, FFG, CGN, etc.): filled circle
 				draw_circle(pos, 3.0, color)

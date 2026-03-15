@@ -1,4 +1,4 @@
-# THRESHOLD v0.4-beta
+# THRESHOLD v0.5-beta
 
 Cold War naval warfare simulation — command US surface ships and submarines in the North Atlantic, hunting Soviet contacts before they slip through.
 
@@ -62,4 +62,4 @@ Include: what you were doing, what happened, and what you expected to happen. Sc
 
 ## Version
 
-v0.4-beta — 2026-03-15
+v0.5-beta — 2026-03-15

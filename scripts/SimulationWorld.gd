@@ -259,8 +259,8 @@ func launch_aircraft(parent_id: String, aircraft_platform_id: String = "", altit
 	return uid
 
 func recover_aircraft(aircraft_id: String) -> void:
-	if aircraft_id in units:
-		destroy_unit(aircraft_id)  # Simple: just remove it. Could refuel/relaunch later.
+	if aircraft_id in units and units[aircraft_id].get("is_airborne", false):
+		_land_aircraft(aircraft_id, units[aircraft_id])
 
 ## Deploy a sonobuoy from an airborne ASW platform at its current position.
 ## Returns the buoy_id string, or "" if the drop cannot be made.
@@ -391,10 +391,12 @@ func _move_units() -> void:
 				else:
 					_crash_aircraft(uid, u)
 
-		# RTB arrival check -- land when reaching base ship
+		# RTB arrival check -- land when reaching base ship, track moving base
 		if u.get("is_airborne", false) and u.get("behavior", "") == "rtb":
 			var base_id: String = u.get("base_unit_id", "")
-			if base_id != "" and base_id in units:
+			if base_id != "" and base_id in units and units[base_id]["is_alive"]:
+				# Update waypoint to track moving base ship
+				u["waypoints"] = [units[base_id]["position"]]
 				var dist_to_base: float = u["position"].distance_to(units[base_id]["position"])
 				if dist_to_base < 1.0:
 					_land_aircraft(uid, u)
@@ -873,10 +875,9 @@ func _radar_detection(detector: Dictionary, target: Dictionary, range_nm: float)
 	# Detection range scales as (RCS / ref_RCS)^(1/4) * max_range
 	var effective_range: float = max_range_nm * pow(target_rcs / ref_rcs, 0.25)
 
-	# Sea state clutter degrades radar
-	var sea_state: int = environment.get("sea_state", 3)
-	var clutter_factor: float = 1.0 - SEA_STATE_RADAR_CLUTTER.get(sea_state, 0.2)
-	effective_range *= clutter_factor
+	# Sea state clutter degrades radar (use weather_sea_state as authoritative)
+	var clutter_factor: float = 1.0 - SEA_STATE_RADAR_CLUTTER.get(weather_sea_state, 0.2)
+	effective_range *= maxf(clutter_factor, 0.05)  # Floor at 5% to prevent div-by-zero
 
 	# ECM/countermeasures (placeholder -- reduce effective range by 30% if target has ECM)
 	if target["platform"].get("has_ecm", false):
@@ -887,14 +888,14 @@ func _radar_detection(detector: Dictionary, target: Dictionary, range_nm: float)
 
 	# Probability based on range vs effective range
 	var p_detect: float = 0.0
+	if effective_range < 0.01:
+		return {"p_detect": 0.0}  # Radar completely degraded
 	if range_nm <= 0.1:
 		p_detect = 1.0
 	elif range_nm < effective_range:
-		# Smooth falloff: high probability at close range, drops near max range
 		var ratio: float = range_nm / effective_range
 		p_detect = clampf(1.0 - pow(ratio, 4.0), 0.0, 1.0)
 	else:
-		# Beyond effective range: small chance at marginal ranges
 		var overshoot: float = range_nm / effective_range
 		if overshoot < 1.3:
 			p_detect = clampf(0.1 * (1.3 - overshoot) / 0.3, 0.0, 0.1)
@@ -944,9 +945,9 @@ func _sonar_detection_passive(detector: Dictionary, target: Dictionary, range_nm
 	# Target Strength (TS) -- not used in passive, set to 0
 	var ts_db: float = 0.0
 
-	# Noise Level at detector: ambient + sea state + weather sea state modifier
-	var sea_state: int = environment.get("sea_state", 3)
-	var ambient_noise: float = 40.0 + 3.0 * sea_state  # BL-1: 40dB at SS0, +3dB per state (open Atlantic)
+	# Noise Level at detector: ambient baseline (linear) + Wenz-curve modifier (non-linear)
+	# weather_sea_state is authoritative — synced with environment.sea_state on every update
+	var ambient_noise: float = 40.0 + 3.0 * weather_sea_state
 	var nl_db: float = ambient_noise + _sea_state_noise_modifier(weather_sea_state)
 
 	# Thermal layer: if target is below thermal layer and detector is above (or vice versa),
@@ -1022,9 +1023,8 @@ func _sonar_detection_active(detector: Dictionary, target: Dictionary, range_nm:
 	# Target Strength
 	var ts_db: float = target["platform"].get("target_strength_db", 15.0)
 
-	# Noise Level + active sonar reverb modifier from weather sea state
-	var sea_state: int = environment.get("sea_state", 3)
-	var nl_db: float = 40.0 + 3.0 * sea_state + _sea_state_active_sonar_modifier(weather_sea_state)  # BL-1: open Atlantic realistic ambient noise
+	# Noise Level + active sonar reverb modifier (weather_sea_state is authoritative)
+	var nl_db: float = 40.0 + 3.0 * weather_sea_state + _sea_state_active_sonar_modifier(weather_sea_state)
 
 	# Thermal layer penalty
 	var thermal_depth: float = environment.get("thermal_layer_depth_m", 75.0)
@@ -1166,8 +1166,7 @@ func _process_sonobuoy_detections() -> void:
 					tl_db -= 15.0
 
 			# --- Noise Level (same formula as _sonar_detection_passive) ---
-			var sea_state: int = environment.get("sea_state", 3)
-			var nl_db: float = 40.0 + 3.0 * sea_state + _sea_state_noise_modifier(weather_sea_state)
+			var nl_db: float = 40.0 + 3.0 * weather_sea_state + _sea_state_noise_modifier(weather_sea_state)
 
 			# --- Detection Threshold (buoy sensitivity, no array gain -- single omnidirectional hydrophone) ---
 			var dt_db: float = buoy["sensitivity_db"]
@@ -1180,7 +1179,7 @@ func _process_sonobuoy_detections() -> void:
 			if det_mult > 0.0 and det_mult != 1.0:
 				snr += 10.0 * log(det_mult) / log(10.0)
 
-			if snr > 0.0:
+			if snr > 0.0 and tick_count % 10 == 0:  # Throttle: emit every 10 ticks
 				var bearing: float = rad_to_deg(atan2(
 					target["position"].x - buoy["position"].x,
 					target["position"].y - buoy["position"].y
@@ -1267,7 +1266,7 @@ func _weather_radar_modifier() -> float:
 		mult *= 0.8
 	if weather_sea_state >= 6:
 		mult *= 0.7
-	return mult
+	return maxf(mult, 0.05)  # Floor to prevent zero effective range
 
 ## Checks for gradual weather shifts every 30 minutes of sim time.
 ## 30% cumulative chance per interval that sea state shifts ±1.
@@ -1279,17 +1278,18 @@ func _maybe_update_weather(sim_time_now: float) -> void:
 		return
 	_last_weather_check_time = sim_time_now
 	# 30% chance of sea state shift (15% up, 15% down)
-	var roll: float = randf()
+	var roll: float = _rng.randf()  # Use seeded RNG, not global randf()
 	if roll < 0.15:
 		weather_sea_state = mini(weather_sea_state + 1, 6)
-		weather_wind_kts = _sea_state_to_wind(weather_sea_state)
-		weather_visibility_nm = _weather_to_visibility(weather_type, weather_sea_state)
-		weather_changed.emit(weather_sea_state, weather_type, weather_visibility_nm)
 	elif roll < 0.30:
 		weather_sea_state = maxi(weather_sea_state - 1, 1)
-		weather_wind_kts = _sea_state_to_wind(weather_sea_state)
-		weather_visibility_nm = _weather_to_visibility(weather_type, weather_sea_state)
-		weather_changed.emit(weather_sea_state, weather_type, weather_visibility_nm)
+	else:
+		return  # No change
+	# Sync environment dict so all systems use same sea state
+	environment["sea_state"] = weather_sea_state
+	weather_wind_kts = _sea_state_to_wind(weather_sea_state)
+	weather_visibility_nm = _weather_to_visibility(weather_type, weather_sea_state)
+	weather_changed.emit(weather_sea_state, weather_type, weather_visibility_nm)
 
 # ---------------------------------------------------------------------------
 # Contact classification
@@ -1342,6 +1342,8 @@ func _classify_contact(detector: Dictionary, target: Dictionary, detection: Dict
 # Weapon firing
 # ---------------------------------------------------------------------------
 func fire_weapon(shooter_id: String, target_id: String, weapon_type_id: String) -> String:
+	if _game_over:
+		return ""
 	# ROE enforcement: maintain_contact scenarios = weapons hold
 	var victory_type: String = scenario.get("victory_condition", {}).get("type", "")
 	if victory_type == "maintain_contact" and shooter_id in units and units[shooter_id]["faction"] == "player":
@@ -1669,6 +1671,8 @@ func load_scenario(scenario_data: Dictionary) -> void:
 	sosus_barriers.clear()
 	sonobuoys.clear()
 	_next_buoy_id = 0
+	_next_unit_id = 0
+	_next_weapon_id = 0
 
 	scenario = scenario_data
 	environment = scenario_data.get("environment", environment)
