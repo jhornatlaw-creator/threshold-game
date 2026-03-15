@@ -44,17 +44,50 @@ var _campaign_mission: int = 0  # Current campaign mission number (1-based), 0 =
 var _campaign_total: int = 0  # Total campaign missions
 var _campaign_name: String = ""  # Current mission name for campaign header
 var _tracking_target_seconds: float = 0.0  # Required contact time for maintain_contact
+var _weather_label: Label = null  # Weather/sea state top-bar display
 
 func _ready() -> void:
 	unit_panel.visible = false
 	result_panel.visible = false
 	_update_help_text()
 	SimulationWorld.sim_tick.connect(_on_sim_tick)
+	SimulationWorld.weather_changed.connect(_on_weather_changed)
 	# All HUD controls pass mouse events through to the tactical map
 	_set_mouse_passthrough(self)
+	# Weather label in top bar (right side)
+	_weather_label = Label.new()
+	_weather_label.name = "WeatherLabel"
+	_weather_label.add_theme_font_size_override("font_size", 11)
+	_weather_label.add_theme_color_override("font_color", Color(0.4, 0.5, 0.6))
+	_weather_label.anchor_left = 1.0
+	_weather_label.anchor_right = 1.0
+	_weather_label.offset_left = -300
+	_weather_label.offset_right = -10
+	_weather_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_weather_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$TopBar.add_child(_weather_label)
+	_update_weather_display()
 
 func _on_sim_tick(_tick: int, _time: float) -> void:
 	_refresh_contacts()
+	_update_weather_display()
+
+func _update_weather_display() -> void:
+	if not _weather_label:
+		return
+	var ss: int = SimulationWorld.weather_sea_state
+	var weather: String = SimulationWorld.weather_type.to_upper()
+	var vis: float = SimulationWorld.weather_visibility_nm
+	_weather_label.text = "SS:%d  %s  VIS:%.0fnm" % [ss, weather, vis]
+	if ss >= 5:
+		_weather_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+	elif ss >= 4:
+		_weather_label.add_theme_color_override("font_color", Color(0.5, 0.6, 0.7))
+	else:
+		_weather_label.add_theme_color_override("font_color", Color(0.3, 0.8, 0.5))
+
+func _on_weather_changed(_sea_state: int, _weather: String, _visibility: float) -> void:
+	_update_weather_display()
 
 func _process(delta: float) -> void:
 	if pause_label:
@@ -681,9 +714,21 @@ func update_selected_unit(u: Dictionary) -> void:
 	if unit_heading_label:
 		unit_heading_label.text = "HDG: %03d" % int(u.get("heading", 0.0))
 	if unit_depth_label:
-		# Fix 12: hide depth label entirely for non-submarine units
 		var platform_type: String = u.get("platform", {}).get("type", "")
-		if platform_type != "SSN":
+		if u.get("is_airborne", false):
+			# Airborne units: show altitude and fuel instead of depth
+			var alt: float = u.get("altitude_ft", 0.0)
+			var fuel: float = u.get("fuel_remaining", 1.0)
+			var fuel_pct: int = int(fuel * 100.0)
+			unit_depth_label.text = "ALT: %dft  FUEL: %d%%" % [int(alt), fuel_pct]
+			if fuel <= 0.1:
+				unit_depth_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+			elif fuel <= 0.3:
+				unit_depth_label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.3))
+			else:
+				unit_depth_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.3))
+			unit_depth_label.visible = true
+		elif platform_type != "SSN":
 			unit_depth_label.visible = false
 		else:
 			var depth: float = u.get("depth_m", 0.0)
@@ -691,6 +736,7 @@ func update_selected_unit(u: Dictionary) -> void:
 				unit_depth_label.text = "DEPTH: %dm" % int(abs(depth))
 			else:
 				unit_depth_label.text = "SURFACE"
+			unit_depth_label.remove_theme_color_override("font_color")
 			unit_depth_label.visible = true
 	if unit_damage_label:
 		var dmg: float = u.get("damage", 0.0)
@@ -841,7 +887,7 @@ func toggle_help() -> void:
 	_help_expanded = not _help_expanded
 	if help_label:
 		if _help_expanded:
-			help_label.text = "LClick: Select / Designate | RClick: Waypoint\nF: Fire | C: Cycle Weapon | Tab: Cycle Units\nW/X: Speed +/- | [/]: Depth (subs)\nR: Radar | S: Sonar | L: Launch Helo\nH: Center Camera | +/-: Zoom | Arrows: Pan\nSPACE: Pause | 1-5: Time Scale | Esc: Menu"
+			help_label.text = "LClick: Select / Designate | RClick: Waypoint\nF: Fire | C: Cycle Weapon | Tab: Cycle Units\nW/X: Speed +/- | [/]: Depth (subs)\nR: Radar | S: Sonar | L: Launch Helo\nH: Center Camera | +/-: Zoom | Arrows: Pan\nSPACE: Pause | 1-5: Time Scale | Esc: Menu\nV: Toggle CRT Mode | M: Toggle Minimap"
 		else:
 			help_label.text = "F1 — Controls"
 

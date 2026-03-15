@@ -12,6 +12,9 @@ var _player_weapon: AudioStreamPlayer
 var _player_explosion: AudioStreamPlayer
 var _player_warning: AudioStreamPlayer  # looping torpedo warning
 var _player_missile: AudioStreamPlayer
+var _player_ocean: AudioStreamPlayer
+var _player_sonar_return: AudioStreamPlayer
+var _player_radio: AudioStreamPlayer
 
 # Pregenerated streams
 var _stream_sonar_ping: AudioStreamWAV
@@ -20,9 +23,16 @@ var _stream_weapon_launch: AudioStreamWAV
 var _stream_explosion: AudioStreamWAV
 var _stream_torpedo_warning: AudioStreamWAV
 var _stream_missile_away: AudioStreamWAV
+var _stream_ocean_loop: AudioStreamWAV
+var _stream_sonar_return: AudioStreamWAV
+var _stream_radio_chatter: AudioStreamWAV
 
 # Torpedo warning state
 var _warning_active: bool = false
+
+# Radio chatter timer
+var _radio_timer: float = 0.0
+var _radio_interval: float = 60.0  # Will be randomized
 
 const SAMPLE_RATE: int = 22050
 
@@ -32,6 +42,16 @@ const SAMPLE_RATE: int = 22050
 func _ready() -> void:
 	_generate_all_streams()
 	_create_players()
+	# Start ambient after a short delay to avoid startup conflicts
+	call_deferred("start_ocean_ambience")
+
+func _process(delta: float) -> void:
+	if not SimulationWorld.is_paused and SimulationWorld.tick_count > 0:
+		_radio_timer += delta
+		if _radio_timer >= _radio_interval:
+			_radio_timer = 0.0
+			_radio_interval = randf_range(30.0, 90.0)
+			play_radio_chatter()
 
 func _create_players() -> void:
 	_player_sonar = _make_player("SonarPlayer", -6.0)
@@ -40,6 +60,9 @@ func _create_players() -> void:
 	_player_explosion = _make_player("ExplosionPlayer", -4.0)
 	_player_warning = _make_player("WarningPlayer", -5.0)
 	_player_missile = _make_player("MissilePlayer", -8.0)
+	_player_ocean = _make_player("OceanPlayer", -20.0)  # Very quiet
+	_player_sonar_return = _make_player("SonarReturnPlayer", -10.0)
+	_player_radio = _make_player("RadioPlayer", -14.0)
 
 func _make_player(node_name: String, volume_db: float) -> AudioStreamPlayer:
 	var p := AudioStreamPlayer.new()
@@ -58,6 +81,9 @@ func _generate_all_streams() -> void:
 	_stream_explosion = _generate_explosion()
 	_stream_torpedo_warning = _generate_torpedo_warning()
 	_stream_missile_away = _generate_missile_away()
+	_stream_ocean_loop = _generate_ocean_loop()
+	_stream_sonar_return = _generate_sonar_return()
+	_stream_radio_chatter = _generate_radio_chatter()
 
 ## Simple sine tone with optional fade-out envelope
 func _generate_tone(freq: float, duration: float, volume: float = 0.4, fade_out: bool = true) -> AudioStreamWAV:
@@ -224,6 +250,94 @@ func _generate_missile_away() -> AudioStreamWAV:
 	stream.data = data
 	return stream
 
+## Ocean ambience: low-frequency rumble + wave wash + subtle hiss, 2s looped
+func _generate_ocean_loop() -> AudioStreamWAV:
+	var duration: float = 2.0
+	var num_samples: int = int(SAMPLE_RATE * duration)
+	var data := PackedByteArray()
+	data.resize(num_samples * 2)
+	var noise_state: int = 54321
+	var lp_state: float = 0.0  # Low-pass filter state
+	for i in range(num_samples):
+		var t: float = float(i) / SAMPLE_RATE
+		# LCG noise
+		noise_state = (noise_state * 1664525 + 1013904223) & 0x7FFFFFFF
+		var noise: float = (float(noise_state) / float(0x7FFFFFFF)) * 2.0 - 1.0
+		# Simple low-pass filter (cutoff ~200 Hz) for ocean rumble
+		var alpha: float = 0.05  # Lower = more filtering
+		lp_state = lp_state + alpha * (noise - lp_state)
+		# Mix: heavy low-pass (rumble) + slight raw noise (spray)
+		var sample: float = lp_state * 0.6 + noise * 0.05
+		# Add very slow amplitude modulation for wave rhythm (~0.15 Hz)
+		var wave_mod: float = 0.85 + 0.15 * sin(2.0 * PI * 0.15 * t)
+		sample *= wave_mod * 0.25
+		var sample_int: int = int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, sample_int)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = SAMPLE_RATE
+	stream.stereo = false
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = num_samples
+	stream.data = data
+	return stream
+
+## Sonar return echo: 1450 Hz (slight Doppler shift), 0.5s, slower decay than ping
+func _generate_sonar_return() -> AudioStreamWAV:
+	var freq: float = 1450.0  # Slightly lower due to Doppler
+	var duration: float = 0.5
+	var num_samples: int = int(SAMPLE_RATE * duration)
+	var data := PackedByteArray()
+	data.resize(num_samples * 2)
+	for i in range(num_samples):
+		var t: float = float(i) / SAMPLE_RATE
+		var envelope: float = exp(-t * 8.0)  # Slower decay than ping
+		var sample: float = sin(2.0 * PI * freq * t) * 0.15 * envelope
+		var sample_int: int = int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, sample_int)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = SAMPLE_RATE
+	stream.stereo = false
+	stream.data = data
+	return stream
+
+## Radio chatter blip: band-pass filtered noise burst (sounds like radio squelch), 0.3s
+func _generate_radio_chatter() -> AudioStreamWAV:
+	var duration: float = 0.3
+	var num_samples: int = int(SAMPLE_RATE * duration)
+	var data := PackedByteArray()
+	data.resize(num_samples * 2)
+	var noise_state: int = 98765
+	var bp_state1: float = 0.0
+	var bp_state2: float = 0.0
+	for i in range(num_samples):
+		var t: float = float(i) / SAMPLE_RATE
+		noise_state = (noise_state * 1664525 + 1013904223) & 0x7FFFFFFF
+		var noise: float = (float(noise_state) / float(0x7FFFFFFF)) * 2.0 - 1.0
+		# Band-pass around 2000 Hz (radio frequency range)
+		var alpha_hp: float = 0.3  # High-pass
+		var alpha_lp: float = 0.15  # Low-pass
+		bp_state1 = bp_state1 + alpha_lp * (noise - bp_state1)
+		bp_state2 = bp_state2 + alpha_hp * (bp_state1 - bp_state2)
+		var sample: float = bp_state1 - bp_state2
+		# Envelope: quick fade in, sustain, quick fade out
+		var env: float = 1.0
+		if t < 0.02:
+			env = t / 0.02
+		elif t > 0.25:
+			env = (duration - t) / 0.05
+		sample *= env * 0.2
+		var sample_int: int = int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, sample_int)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = SAMPLE_RATE
+	stream.stereo = false
+	stream.data = data
+	return stream
+
 # ---------------------------------------------------------------------------
 # Public play methods
 # ---------------------------------------------------------------------------
@@ -231,6 +345,9 @@ func play_sonar_ping() -> void:
 	if _player_sonar and _stream_sonar_ping:
 		_player_sonar.stream = _stream_sonar_ping
 		_player_sonar.play()
+		# Schedule echo return after 1.5-3 seconds
+		var delay: float = randf_range(1.5, 3.0)
+		get_tree().create_timer(delay).timeout.connect(play_sonar_return)
 
 func play_contact_new() -> void:
 	if _player_contact and _stream_contact_new:
@@ -262,3 +379,26 @@ func play_missile_away() -> void:
 	if _player_missile and _stream_missile_away:
 		_player_missile.stream = _stream_missile_away
 		_player_missile.play()
+
+## Start the ambient ocean loop. Called once when scenario loads.
+func start_ocean_ambience() -> void:
+	if _player_ocean and _stream_ocean_loop:
+		_player_ocean.stream = _stream_ocean_loop
+		_player_ocean.play()
+
+## Stop the ambient ocean loop.
+func stop_ocean_ambience() -> void:
+	if _player_ocean:
+		_player_ocean.stop()
+
+## Play the sonar return echo (delayed ping return).
+func play_sonar_return() -> void:
+	if _player_sonar_return and _stream_sonar_return:
+		_player_sonar_return.stream = _stream_sonar_return
+		_player_sonar_return.play()
+
+## Play a radio chatter blip.
+func play_radio_chatter() -> void:
+	if _player_radio and _stream_radio_chatter:
+		_player_radio.stream = _stream_radio_chatter
+		_player_radio.play()

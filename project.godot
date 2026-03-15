@@ -22,6 +22,7 @@ AudioManager="*res://scripts/AudioManager.gd"
 ScoreManager="*res://scripts/ScoreManager.gd"
 CampaignManager="*res://scripts/CampaignManager.gd"
 CRTEffect="*res://scripts/CRTEffect.gd"
+Minimap="*res://scripts/Minimap.gd"
 
 [display]
 

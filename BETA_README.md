@@ -1,4 +1,4 @@
-# THRESHOLD v0.3-beta
+# THRESHOLD v0.4-beta
 
 Cold War naval warfare simulation — command US surface ships and submarines in the North Atlantic, hunting Soviet contacts before they slip through.
 
@@ -26,7 +26,9 @@ Double-click `THRESHOLD.exe`. No install required.
 | Space | Pause / unpause |
 | 1 - 5 | Time scale (1x through 5x) |
 | F1 | Toggle controls reference |
+| B | Drop sonobuoy (aircraft only) |
 | V | Toggle CRT monitor effect |
+| M | Toggle minimap |
 | Esc | Menu |
 
 ## What to Test
@@ -41,6 +43,10 @@ Double-click `THRESHOLD.exe`. No install required.
 - **CRT Mode** — Press V to toggle the retro CRT monitor effect. Verify scanlines, vignette, and barrel distortion render correctly.
 - **Weather** — In longer missions, sea state may shift. Check if sonar/radar performance changes with conditions.
 - **New scenarios** — Try Torpedo Alley, Convoy Escort, Surface Action, and Lone Wolf from Single Mission menu.
+- **Minimap** — Press M to toggle the tactical minimap in the bottom-right corner. Shows all known contacts and own forces.
+- **Sonobuoys** — Select a P-3C or helicopter and press B to drop a sonobuoy. Verify it detects nearby submarines and expires after ~40 minutes.
+- **Helicopter fuel** — Launch a helicopter and watch fuel drain. At 10% it should auto-RTB. Verify it lands and can be relaunched.
+- **Ambient audio** — Listen for ocean ambience, sonar return echoes, and occasional radio chatter blips.
 
 ## Known Limitations
 
@@ -56,4 +62,4 @@ Include: what you were doing, what happened, and what you expected to happen. Sc
 
 ## Version
 
-v0.3-beta — 2026-03-15
+v0.4-beta — 2026-03-15

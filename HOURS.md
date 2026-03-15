@@ -14,3 +14,4 @@ If no entry for 14 consecutive days, project is stalled. Review and either push 
 |------------|-------|------------|--------------------------------------------------------|---------------|
 | 2026-03-12 | 4     | 4          | Project scaffold, SimulationWorld, PlatformLoader, detection model, RenderBridge, HUD, scenario, data files | Pre-Gate 1 |
 | 2026-03-15 | 6     | 10         | Difficulty selection, pause menu, export config, beta docs, settings | Gate 2 |
+| 2026-03-15 | 4     | 14         | CRT shader, mission debrief screen, 4 skirmish scenarios, weather system, v0.3 build + release | Gate 2 |

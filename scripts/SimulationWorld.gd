@@ -25,7 +25,13 @@ signal time_scale_changed(new_scale: float)
 signal contact_classified(detector_id: String, target_id: String, classification: Dictionary)
 signal sosus_contact(barrier_id: String, bearing_deg: float, confidence: float)
 signal helicopter_launched(parent_id: String, helo_id: String)
+signal aircraft_bingo(aircraft_id: String, aircraft_name: String)
+signal aircraft_landed(aircraft_id: String, aircraft_name: String)
+signal aircraft_crashed(aircraft_id: String, aircraft_name: String)
 signal weather_changed(sea_state: int, weather: String, visibility: float)
+signal sonobuoy_deployed(buoy_id: String, position: Vector2, faction: String)
+signal sonobuoy_contact(buoy_id: String, target_id: String, bearing_deg: float, snr: float)
+signal sonobuoy_expired(buoy_id: String)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -72,6 +78,8 @@ var _game_over: bool = false  # Fix 4: prevent double scenario_ended emission
 var _contact_accumulator: float = 0.0  # Cumulative seconds of contact for maintain_contact victory
 var difficulty: Dictionary = {}  # Item 16: difficulty scaling from scenario
 var sosus_barriers: Array = []  # Array of {id, start_pos, end_pos, sensitivity_db}
+var sonobuoys: Dictionary = {}  # buoy_id -> {position, faction, deploy_time, battery_life, sensitivity_db, deployer_id}
+var _next_buoy_id: int = 0
 
 # Weather / environment state
 var weather_sea_state: int = 4
@@ -107,6 +115,7 @@ func _sim_tick() -> void:
 	_move_units()
 	_run_ai_behaviors()
 	_update_detections()
+	_process_sonobuoy_detections()
 	_move_weapons()
 	_resolve_weapons()
 	_check_scenario_conditions()
@@ -161,6 +170,13 @@ func spawn_unit(platform_id: String, pos: Vector2, heading: float,
 	if platform_data.get("type", "") == "SSN":
 		unit["depth_m"] = -100.0
 		unit["ordered_depth_m"] = -100.0
+
+	# Sonobuoy inventory: read from platform data, default 0 for non-ASW platforms
+	var buoy_count: int = platform_data.get("sonobuoy_count", 0)
+	if buoy_count == 0:
+		match platform_data.get("type", ""):
+			"MPA": buoy_count = 48
+	unit["sonobuoys_remaining"] = buoy_count
 
 	units[uid] = unit
 	unit_spawned.emit(uid, unit.duplicate(true))
@@ -246,6 +262,34 @@ func recover_aircraft(aircraft_id: String) -> void:
 	if aircraft_id in units:
 		destroy_unit(aircraft_id)  # Simple: just remove it. Could refuel/relaunch later.
 
+## Deploy a sonobuoy from an airborne ASW platform at its current position.
+## Returns the buoy_id string, or "" if the drop cannot be made.
+func deploy_sonobuoy(deployer_id: String) -> String:
+	if deployer_id not in units:
+		return ""
+	var u: Dictionary = units[deployer_id]
+	if not u["is_alive"] or not u.get("is_airborne", false):
+		return ""
+	var buoys_remaining: int = u.get("sonobuoys_remaining", 0)
+	if buoys_remaining <= 0:
+		return ""
+	u["sonobuoys_remaining"] = buoys_remaining - 1
+
+	var buoy_id: String = "BUOY_%d" % _next_buoy_id
+	_next_buoy_id += 1
+
+	sonobuoys[buoy_id] = {
+		"position": Vector2(u["position"]),
+		"faction": u["faction"],
+		"deploy_time": sim_time,
+		"battery_life": 2400.0,   # 40 minutes sim time
+		"sensitivity_db": 75.0,   # Detection threshold (same role as sensor detection_threshold_db)
+		"deployer_id": deployer_id,
+	}
+
+	sonobuoy_deployed.emit(buoy_id, u["position"], u["faction"])
+	return buoy_id
+
 # ---------------------------------------------------------------------------
 # Weapon initialization helpers
 # ---------------------------------------------------------------------------
@@ -326,17 +370,67 @@ func _move_units() -> void:
 		if u.get("is_airborne", false) and u.get("max_endurance_hours", 0.0) > 0.0:
 			var fuel_per_tick: float = (1.0 / BASE_TICK_HZ) / (u["max_endurance_hours"] * 3600.0)
 			u["fuel_remaining"] -= fuel_per_tick
-			if u["fuel_remaining"] <= 0.1:  # Bingo fuel -- auto RTB
+			# Bingo fuel -- auto RTB (only trigger once)
+			if u["fuel_remaining"] <= 0.1 and u.get("behavior", "") != "rtb":
 				u["fuel_remaining"] = maxf(u["fuel_remaining"], 0.0)
 				_air_rtb(uid, u)
+			# Out of fuel -- aircraft lost
+			if u["fuel_remaining"] <= 0.0:
+				u["fuel_remaining"] = 0.0
+				if u.get("behavior", "") == "rtb":
+					# Check if close enough to base to land
+					var base_id: String = u.get("base_unit_id", "")
+					if base_id != "" and base_id in units:
+						var dist_to_base: float = u["position"].distance_to(units[base_id]["position"])
+						if dist_to_base < 1.0:
+							_land_aircraft(uid, u)
+						else:
+							_crash_aircraft(uid, u)
+					else:
+						_crash_aircraft(uid, u)
+				else:
+					_crash_aircraft(uid, u)
 
+		# RTB arrival check -- land when reaching base ship
+		if u.get("is_airborne", false) and u.get("behavior", "") == "rtb":
+			var base_id: String = u.get("base_unit_id", "")
+			if base_id != "" and base_id in units:
+				var dist_to_base: float = u["position"].distance_to(units[base_id]["position"])
+				if dist_to_base < 1.0:
+					_land_aircraft(uid, u)
+
+## Initiate return-to-base for an airborne unit.
 func _air_rtb(uid: String, u: Dictionary) -> void:
 	var base_id: String = u.get("base_unit_id", "")
-	if base_id != "" and base_id in units:
+	if base_id != "" and base_id in units and units[base_id]["is_alive"]:
 		u["waypoints"] = [units[base_id]["position"]]
 		u["speed_kts"] = u["max_speed_kts"] * 0.8
 		u["behavior"] = "rtb"
-	# If base is gone, circle in place
+		aircraft_bingo.emit(uid, u.get("name", uid))
+	elif base_id != "" and (base_id not in units or not units[base_id]["is_alive"]):
+		# Base ship destroyed -- divert or crash when fuel runs out
+		u["behavior"] = "rtb"
+		aircraft_bingo.emit(uid, u.get("name", uid))
+
+## Land aircraft on its base ship. Refuels and goes on deck for relaunch.
+func _land_aircraft(uid: String, u: Dictionary) -> void:
+	u["is_airborne"] = false
+	u["altitude_ft"] = 0.0
+	u["ordered_altitude_ft"] = 0.0
+	u["fuel_remaining"] = 1.0
+	u["speed_kts"] = 0.0
+	u["behavior"] = "hold"
+	u["waypoints"] = []
+	u["visible"] = false
+	var base_id: String = u.get("base_unit_id", "")
+	if base_id != "" and base_id in units:
+		u["position"] = units[base_id]["position"]
+	aircraft_landed.emit(uid, u.get("name", uid))
+
+## Aircraft ran out of fuel in flight -- lost.
+func _crash_aircraft(uid: String, u: Dictionary) -> void:
+	aircraft_crashed.emit(uid, u.get("name", uid))
+	destroy_unit(uid)
 
 func _turn_toward(current_deg: float, target_deg: float, max_turn: float) -> float:
 	var diff: float = fmod(target_deg - current_deg + 540.0, 360.0) - 180.0
@@ -1013,6 +1107,93 @@ func _closest_point_on_line(a: Vector2, b: Vector2, p: Vector2) -> Vector2:
 	var t: float = clampf((p - a).dot(ab) / ab.dot(ab), 0.0, 1.0)
 	return a + ab * t
 
+# ---------------------------------------------------------------------------
+# Sonobuoy detection processing -- runs each tick for all active buoys
+# ---------------------------------------------------------------------------
+func _process_sonobuoy_detections() -> void:
+	var expired: Array = []
+
+	for buoy_id in sonobuoys:
+		var buoy: Dictionary = sonobuoys[buoy_id]
+
+		# Battery check
+		var age: float = sim_time - buoy["deploy_time"]
+		if age > buoy["battery_life"]:
+			expired.append(buoy_id)
+			continue
+
+		# Determine enemy faction relative to this buoy's faction
+		var enemy_faction: String = "enemy" if buoy["faction"] == "player" else "player"
+
+		for uid in units:
+			var target: Dictionary = units[uid]
+			if not target["is_alive"] or target["faction"] != enemy_faction:
+				continue
+			# Sonobuoys detect underwater contacts only (submarines and surface ships below waterline)
+			# Skip airborne units -- they make no underwater sound
+			if target.get("is_airborne", false):
+				continue
+
+			var dist_nm: float = buoy["position"].distance_to(target["position"])
+
+			# --- Source Level (same formula as _sonar_detection_passive) ---
+			var base_noise_db: float = target["platform"].get("noise_db_cruise", 120.0)
+			var speed_ratio: float = target["speed_kts"] / maxf(target["max_speed_kts"], 1.0)
+			var sl_db: float = base_noise_db + 20.0 * log(maxf(speed_ratio, 0.01)) / log(10.0)
+			if target["speed_kts"] < 1.0:
+				sl_db = base_noise_db - 30.0
+
+			# --- Transmission Loss (same formula as _sonar_detection_passive) ---
+			var range_m: float = dist_nm * 1852.0
+			var alpha: float = 0.0002  # dB per meter (mid-frequency, ~0.2 dB/km at 3.5 kHz)
+			var tl_db: float = 15.0 * log(maxf(range_m, 1.0)) / log(10.0) + alpha * range_m / 1000.0
+
+			# Thermal layer penalty: buoys float on the surface (depth 0), so submarines
+			# below the thermal layer incur the same 15dB cross-layer penalty
+			var thermal_depth: float = environment.get("thermal_layer_depth_m", 75.0)
+			var tgt_depth: float = absf(target["depth_m"])
+			if tgt_depth > thermal_depth:
+				tl_db += 15.0
+
+			# Convergence zone (same as _sonar_detection_passive)
+			var water_depth: float = environment.get("water_depth_m", 200.0)
+			if water_depth >= 250.0:
+				var cz_interval: float = 33.0
+				var cz_width: float = 3.0
+				var cz_number: float = dist_nm / cz_interval
+				var cz_remainder: float = absf(cz_number - roundf(cz_number)) * cz_interval
+				if cz_remainder < cz_width and dist_nm > 20.0:
+					tl_db -= 15.0
+
+			# --- Noise Level (same formula as _sonar_detection_passive) ---
+			var sea_state: int = environment.get("sea_state", 3)
+			var nl_db: float = 40.0 + 3.0 * sea_state + _sea_state_noise_modifier(weather_sea_state)
+
+			# --- Detection Threshold (buoy sensitivity, no array gain -- single omnidirectional hydrophone) ---
+			var dt_db: float = buoy["sensitivity_db"]
+
+			# SNR = SL - TL - NL - DT  (passive, no target strength, no array gain)
+			var snr: float = sl_db - tl_db - nl_db - dt_db
+
+			# Difficulty scaling (same as _sonar_detection_passive)
+			var det_mult: float = difficulty.get("detection_mult", 1.0)
+			if det_mult > 0.0 and det_mult != 1.0:
+				snr += 10.0 * log(det_mult) / log(10.0)
+
+			if snr > 0.0:
+				var bearing: float = rad_to_deg(atan2(
+					target["position"].x - buoy["position"].x,
+					target["position"].y - buoy["position"].y
+				))
+				if bearing < 0.0:
+					bearing += 360.0
+				sonobuoy_contact.emit(buoy_id, uid, bearing, snr)
+
+	# Remove expired buoys after iteration
+	for buoy_id in expired:
+		sonobuoy_expired.emit(buoy_id)
+		sonobuoys.erase(buoy_id)
+
 func _snr_to_probability(snr_db: float) -> float:
 	# Sigmoid mapping: SNR -> probability
 	# At SNR=0dB -> ~50% detection, SNR=10dB -> ~93%, SNR=-10dB -> ~7%
@@ -1486,6 +1667,8 @@ func load_scenario(scenario_data: Dictionary) -> void:
 	_game_over = false  # Fix 4: reset game-over flag on scenario load
 	_contact_accumulator = 0.0
 	sosus_barriers.clear()
+	sonobuoys.clear()
+	_next_buoy_id = 0
 
 	scenario = scenario_data
 	environment = scenario_data.get("environment", environment)

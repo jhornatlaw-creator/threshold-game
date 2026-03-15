@@ -220,6 +220,7 @@
       "has_esm": true,
       "antenna_height_ft": 0,
       "max_endurance_hours": 3.5,
+      "sonobuoy_count": 12,
       "weapons": ["mk46_torpedo"],
       "sensors": ["ans_dipping"],
       "description": "Ship-based ASW helicopter. LAMPS III system. Dipping sonar, sonobuoys, and Mk 46 torpedoes. Primary ASW prosecution platform for surface ships."
@@ -244,6 +245,7 @@
       "has_esm": true,
       "antenna_height_ft": 0,
       "max_endurance_hours": 12.0,
+      "sonobuoy_count": 48,
       "weapons": ["mk46_torpedo"],
       "sensors": ["ans_searchradar"],
       "description": "Land-based maritime patrol aircraft. 12+ hour endurance. Carries sonobuoys, MAD, and torpedoes. Primary NATO ASW search platform."
@@ -268,6 +270,7 @@
       "has_esm": false,
       "antenna_height_ft": 0,
       "max_endurance_hours": 2.5,
+      "sonobuoy_count": 8,
       "weapons": ["set65_torpedo"],
       "sensors": ["ans_dipping_soviet"],
       "description": "Soviet shipborne ASW helicopter. Dipping sonar and torpedoes. Carried on Udaloy (x2) and Kirov."

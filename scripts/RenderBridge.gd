@@ -27,6 +27,7 @@ var _player_unit_ids: Array = []  # M-6: ordered list of player unit IDs for Tab
 var _player_cycle_index: int = -1
 var _result_shown: bool = false  # Item 10: track if result screen is visible
 var _lost_contact_timers: Dictionary = {}  # target_id -> ticks remaining for last-known datum
+var _route_line: Line2D = null  # Waypoint route line for selected player unit
 
 # Tutorial integration signals
 signal unit_selected(unit_id: String)
@@ -43,6 +44,12 @@ const NM_TO_PX: float = 10.0
 func _ready() -> void:
 	_connect_signals()
 	_setup_camera()
+	# Route line for selected player unit's waypoint path
+	_route_line = Line2D.new()
+	_route_line.width = 1.5
+	_route_line.default_color = Color(0.3, 0.7, 1.0, 0.4)
+	_route_line.name = "RouteLine"
+	units_layer.add_child(_route_line)
 
 func _connect_signals() -> void:
 	SimulationWorld.unit_spawned.connect(_on_unit_spawned)
@@ -62,6 +69,9 @@ func _connect_signals() -> void:
 	SimulationWorld.contact_classified.connect(_on_contact_classified)
 	SimulationWorld.sosus_contact.connect(_on_sosus_contact)
 	SimulationWorld.helicopter_launched.connect(_on_helicopter_launched)
+	SimulationWorld.aircraft_bingo.connect(_on_aircraft_bingo)
+	SimulationWorld.aircraft_landed.connect(_on_aircraft_landed)
+	SimulationWorld.aircraft_crashed.connect(_on_aircraft_crashed)
 
 func _setup_camera() -> void:
 	if camera:
@@ -216,6 +226,22 @@ func _on_helicopter_launched(parent_id: String, helo_id: String) -> void:
 		var parent_name: String = SimulationWorld.units[parent_id].get("name", parent_id)
 		if hud and hud.has_method("show_message"):
 			hud.show_message("%s: HELO AIRBORNE" % parent_name, 2.0)
+
+func _on_aircraft_bingo(_aircraft_id: String, aircraft_name: String) -> void:
+	if hud and hud.has_method("show_message"):
+		hud.show_message("%s: BINGO FUEL — RETURNING TO BASE" % aircraft_name, 3.0)
+	AudioManager.play_contact_new()
+
+func _on_aircraft_landed(aircraft_id: String, aircraft_name: String) -> void:
+	if aircraft_id in _unit_visuals:
+		_unit_visuals[aircraft_id].visible = false
+	if hud and hud.has_method("show_message"):
+		hud.show_message("%s: RECOVERED ON DECK" % aircraft_name, 2.0)
+
+func _on_aircraft_crashed(_aircraft_id: String, aircraft_name: String) -> void:
+	if hud and hud.has_method("show_message"):
+		hud.show_message("%s: LOST — FUEL EXHAUSTED" % aircraft_name, 4.0)
+	AudioManager.play_explosion()
 
 # ---------------------------------------------------------------------------
 # Signal handlers -- weapons
@@ -472,6 +498,30 @@ func _update_hud() -> void:
 								continue
 							wpn_ranges.append({"name": wdata.get("name", wid).substr(0, 10), "range": wdata.get("max_range_nm", 50.0)})
 				hud.update_fire_target(tgt_name, tgt_range, wpn_ranges)
+	_update_route_line()
+
+func _update_route_line() -> void:
+	if not _route_line:
+		return
+	if _selected_unit_id == "" or _selected_unit_id not in SimulationWorld.units:
+		_route_line.clear_points()
+		return
+	var u: Dictionary = SimulationWorld.units[_selected_unit_id]
+	if u["faction"] != "player" or not u["is_alive"]:
+		_route_line.clear_points()
+		return
+	var waypoints: Array = u.get("waypoints", [])
+	if waypoints.is_empty():
+		_route_line.clear_points()
+		return
+	_route_line.clear_points()
+	# Start from current position
+	_route_line.add_point(u["position"] * NM_TO_PX)
+	for wp in waypoints:
+		if wp is Vector2:
+			_route_line.add_point(wp * NM_TO_PX)
+		elif wp is Array and wp.size() >= 2:
+			_route_line.add_point(Vector2(wp[0], wp[1]) * NM_TO_PX)
 
 func _update_selection_visuals() -> void:
 	for uid in _unit_visuals:
@@ -582,6 +632,29 @@ func _unhandled_input(event: InputEvent) -> void:
 					CRTEffect.enabled = not CRTEffect.enabled
 					if hud and hud.has_method("show_message"):
 						hud.show_message("CRT MODE: %s" % ("ON" if CRTEffect.enabled else "OFF"), 2.0)
+			KEY_M:
+				# Toggle minimap visibility
+				if not event.echo:
+					Minimap.enabled = not Minimap.enabled
+					if hud and hud.has_method("show_message"):
+						hud.show_message("MINIMAP: %s" % ("ON" if Minimap.enabled else "OFF"), 2.0)
+			KEY_B:
+				# Drop sonobuoy from selected aircraft
+				if _selected_unit_id != "" and _selected_unit_id in SimulationWorld.units:
+					var u: Dictionary = SimulationWorld.units[_selected_unit_id]
+					if u.get("is_airborne", false):
+						var buoy_id: String = SimulationWorld.deploy_sonobuoy(_selected_unit_id)
+						if buoy_id != "":
+							var remaining: int = u.get("sonobuoys_remaining", 0)
+							if hud and hud.has_method("show_message"):
+								hud.show_message("SONOBUOY DEPLOYED (%d remaining)" % remaining, 2.0)
+							AudioManager.play_weapon_launch()
+						else:
+							if hud and hud.has_method("show_message"):
+								hud.show_message("NO SONOBUOYS AVAILABLE", 2.0)
+					else:
+						if hud and hud.has_method("show_message"):
+							hud.show_message("MUST BE AIRBORNE TO DROP SONOBUOYS", 2.0)
 			KEY_TAB:
 				_cycle_player_unit()  # M-6: Tab cycles through player units
 			KEY_ESCAPE:
