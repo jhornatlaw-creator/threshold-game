@@ -1,0 +1,13 @@
+# Godot
+.godot/
+*.import
+
+# Build output
+build/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Export templates (large binaries)
+*.tpz

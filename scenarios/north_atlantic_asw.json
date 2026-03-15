@@ -1,0 +1,80 @@
+{
+  "name": "North Atlantic ASW Patrol",
+  "description": "A small US Navy surface task force patrols the GIUK Gap. Intelligence reports indicate 1-2 Soviet submarines operating in the area. Find them. Sink them. Don't lose the task force.",
+  "briefing": "CLASSIFICATION: SECRET\n\nTO: Commander, Task Force BRAVO\nFROM: COMNAVAIRLANT INTEL WATCH\nDTG: 060400Z NOV 1985\n\nTwo contacts. Akula-class. Transited the GIUK Gap eighteen hours ago heading south.\nWe lost them in the thermal layer east of the Reykjanes Ridge.\n\nThey know the Gap. They've done this before.\n\nYour assets: USS Kidd (DDG), USS Elrod (FFG), USS Jacksonville (SSN).\nJacksonville is operating independently — keep her inside your sensor net.\n\nSurface radar is your liability. The moment you go active on sonar, you tell them where you are.\nThey will not hesitate.\n\nFind them before they find you.\n\nRules of engagement: weapons free on confirmed hostile subsurface contacts.",
+  "environment": {
+    "sea_state": 4,
+    "time_of_day": 6.0,
+    "weather": "overcast",
+    "water_depth_m": 300,
+    "thermal_layer_depth_m": 80
+  },
+  "victory_condition": {
+    "type": "destroy_all_enemies",
+    "time_limit_seconds": 7200
+  },
+  "difficulty": {
+    "detection_mult": 1.0,
+    "player_pk_mult": 1.0,
+    "ai_attack_threshold": 0.3
+  },
+  "units": [
+    {
+      "id": "PLAYER_DDG",
+      "platform_id": "ddg_arleigh_burke",
+      "name": "USS Kidd",
+      "faction": "player",
+      "x": 0.0,
+      "y": 0.0,
+      "heading": 0,
+      "speed_kts": 12,
+      "waypoints": [[0, -30]]
+    },
+    {
+      "id": "PLAYER_FFG",
+      "platform_id": "ffg_oliver_hazard_perry",
+      "name": "USS Elrod",
+      "faction": "player",
+      "x": 5.0,
+      "y": 3.0,
+      "heading": 350,
+      "speed_kts": 12,
+      "waypoints": [[5, -27]]
+    },
+    {
+      "id": "PLAYER_SSN",
+      "platform_id": "ssn_los_angeles",
+      "name": "USS Jacksonville",
+      "faction": "player",
+      "x": 20.0,
+      "y": -10.0,
+      "heading": 270,
+      "speed_kts": 5,
+      "waypoints": [[15, -20], [5, -30], [0, -40], [10, -45], [20, -35], [15, -20]]
+    },
+    {
+      "id": "ENEMY_SSN_1",
+      "platform_id": "ssn_akula",
+      "name": "K-317 Pantera",
+      "faction": "enemy",
+      "x": -8.0,
+      "y": -20.0,
+      "heading": 45,
+      "speed_kts": 8,
+      "behavior": "patrol",
+      "waypoints": [[2, -10], [10, -5], [0, 5], [-10, -10], [-8, -20]]
+    },
+    {
+      "id": "ENEMY_SSN_2",
+      "platform_id": "ssn_akula",
+      "name": "K-331 Magadan",
+      "faction": "enemy",
+      "x": 15.0,
+      "y": -25.0,
+      "heading": 315,
+      "speed_kts": 6,
+      "behavior": "patrol",
+      "waypoints": [[5, -15], [-5, -5], [10, 0], [20, -15], [15, -25]]
+    }
+  ]
+}

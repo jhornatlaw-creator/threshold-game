@@ -1,0 +1,79 @@
+{
+  "name": "Silent Watch",
+  "description": "The shooting has stopped. Two Soviet submarines are withdrawing. Track them. Don't let them vanish. Don't start it again.",
+  "briefing": "CLASSIFICATION: CONFIDENTIAL\n\nTO: Commander, Patrol Group DELTA\nFROM: COMNAVAIRLANT\nDTG: 241945Z NOV 1985\n\nA ceasefire is in effect as of 241800Z.\n\nTwo Soviet Akula-class submarines remain in your sector. They are not attacking. They are withdrawing southwest, presumably back through the GIUK gap.\n\nYour orders are to maintain continuous passive sonar contact on both boats for the duration of their transit through your area of responsibility. You are not to lose them. You are not to fire.\n\nWeapons hold. This is not a discretionary instruction.\n\nThe Soviets know they are being tracked. They will attempt to break contact. Do not let them.\n\nSomebody in a room far from here worked very hard to stop this war. Do not be the one who starts it again.\n\nMaintain contact. Report. Nothing else.",
+  "campaign_mission": 7,
+  "environment": {
+    "sea_state": 3,
+    "time_of_day": 20.0,
+    "weather": "clear",
+    "water_depth_m": 350,
+    "thermal_layer_depth_m": 90
+  },
+  "victory_condition": {
+    "type": "maintain_contact",
+    "contact_duration_seconds": 1800,
+    "time_limit_seconds": 7200
+  },
+  "difficulty": {
+    "detection_mult": 1.2,
+    "player_pk_mult": 1.0,
+    "ai_attack_threshold": 0.50
+  },
+  "units": [
+    {
+      "id": "PLAYER_DDG",
+      "platform_id": "ddg_arleigh_burke",
+      "name": "USS Kidd",
+      "faction": "player",
+      "x": 0.0,
+      "y": 0.0,
+      "heading": 225,
+      "speed_kts": 10
+    },
+    {
+      "id": "PLAYER_FFG",
+      "platform_id": "ffg_oliver_hazard_perry",
+      "name": "USS Elrod",
+      "faction": "player",
+      "x": 8.0,
+      "y": -5.0,
+      "heading": 225,
+      "speed_kts": 10
+    },
+    {
+      "id": "PLAYER_SSN",
+      "platform_id": "ssn_los_angeles",
+      "name": "USS Jacksonville",
+      "faction": "player",
+      "x": -5.0,
+      "y": 12.0,
+      "heading": 210,
+      "speed_kts": 5
+    },
+    {
+      "id": "ENEMY_SSN_1",
+      "platform_id": "ssn_akula",
+      "name": "K-317 Pantera",
+      "faction": "enemy",
+      "x": 20.0,
+      "y": -15.0,
+      "heading": 215,
+      "speed_kts": 5,
+      "behavior": "evasive_patrol",
+      "waypoints": [[10, -30], [-5, -50], [-20, -65], [-35, -80], [-50, -100]]
+    },
+    {
+      "id": "ENEMY_SSN_2",
+      "platform_id": "ssn_akula",
+      "name": "K-331 Magadan",
+      "faction": "enemy",
+      "x": 35.0,
+      "y": 5.0,
+      "heading": 200,
+      "speed_kts": 4,
+      "behavior": "evasive_patrol",
+      "waypoints": [[25, -15], [10, -35], [-10, -55], [-25, -70], [-40, -90]]
+    }
+  ]
+}

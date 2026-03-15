@@ -1,0 +1,92 @@
+{
+  "name": "Northern Watch",
+  "description": "A Soviet surface group is operating near your patrol area. Rules of engagement are restrictive. Do not fire unless fired upon.",
+  "briefing": "CLASSIFICATION: SECRET\n\nTO: Commander, Patrol Group DELTA\nFROM: COMNAVAIRLANT\nDTG: 181200Z NOV 1985\n\nThe Soviet exercise has not ended. A second surface group is moving south through the Norwegian Sea.\n\nDiplomatic channels are active. Rules of engagement have been tightened.\n\nDo not fire unless fired upon. Do not illuminate with fire control radar.\n\nThe lead Udaloy painted USS Kidd with fire control radar at 0847Z. And again at 0903Z.\n\nIt was not an accident.\n\nMaintain contact. Report all movements. Weapons tight until further notice.\n\nUpdate 1100Z: ROE change. Weapons free on confirmed hostile contacts. They crossed the line first.",
+  "campaign_mission": 4,
+  "environment": {
+    "sea_state": 5,
+    "time_of_day": 12.0,
+    "weather": "rain",
+    "water_depth_m": 350,
+    "thermal_layer_depth_m": 60
+  },
+  "victory_condition": {
+    "type": "destroy_all_enemies",
+    "time_limit_seconds": 7200
+  },
+  "difficulty": {
+    "detection_mult": 0.9,
+    "player_pk_mult": 1.0,
+    "ai_attack_threshold": 0.25
+  },
+  "units": [
+    {
+      "id": "PLAYER_DDG",
+      "platform_id": "ddg_arleigh_burke",
+      "name": "USS Kidd",
+      "faction": "player",
+      "x": 0.0,
+      "y": 0.0,
+      "heading": 0,
+      "speed_kts": 12
+    },
+    {
+      "id": "PLAYER_FFG",
+      "platform_id": "ffg_oliver_hazard_perry",
+      "name": "USS Elrod",
+      "faction": "player",
+      "x": 8.0,
+      "y": 5.0,
+      "heading": 350,
+      "speed_kts": 12
+    },
+    {
+      "id": "PLAYER_SSN",
+      "platform_id": "ssn_los_angeles",
+      "name": "USS Jacksonville",
+      "faction": "player",
+      "x": 15.0,
+      "y": -10.0,
+      "heading": 270,
+      "speed_kts": 5
+    },
+    {
+      "id": "ENEMY_UDALOY_1",
+      "platform_id": "ddg_udaloy",
+      "name": "Admiral Vinogradov",
+      "faction": "enemy",
+      "x": -10.0,
+      "y": -25.0,
+      "heading": 180,
+      "speed_kts": 20,
+      "has_helicopter": true,
+      "behavior": "patrol",
+      "waypoints": [[-5, -15], [5, -5], [-5, 5], [-15, -10], [-10, -25]]
+    },
+    {
+      "id": "ENEMY_UDALOY_2",
+      "platform_id": "ddg_udaloy",
+      "name": "Marshal Shaposhnikov",
+      "faction": "enemy",
+      "x": -15.0,
+      "y": -28.0,
+      "heading": 180,
+      "speed_kts": 18,
+      "has_helicopter": true,
+      "behavior": "patrol",
+      "waypoints": [[-10, -18], [0, -8], [-10, 2], [-20, -13], [-15, -28]]
+    },
+    {
+      "id": "ENEMY_SSN",
+      "platform_id": "ssn_akula",
+      "name": "K-480 Bars",
+      "faction": "enemy",
+      "x": 20.0,
+      "y": -35.0,
+      "heading": 315,
+      "speed_kts": 6,
+      "behavior": "patrol",
+      "waypoints": [[10, -25], [0, -15], [10, -5], [20, -20], [20, -35]]
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "name": "Reykjanes Ridge",
+  "description": "The Soviet SSN group that has been tracking your carrier group has been ordered to close. Stop them.",
+  "briefing": "CLASSIFICATION: SECRET -- FLASH\n\nTO: Commander, Patrol Group DELTA\nFROM: CVN-68 NIMITZ COMBAT CONTROL\nDTG: 220600Z NOV 1985\n\nWe have a problem.\n\nFleet tracking shows two confirmed and one probable hostile SSN closing on the battle group from the east.\n\nEstimated time to weapons release range: 45 minutes.\n\nA coordinated torpedo salvo at this range saturates our screen. The carrier does not maneuver. Your screen does.\n\nYour assets are all that stand between them and the flight deck.\n\nJacksonville has not confirmed the third contact. She may be inside its detection envelope. Assume she is.\n\nOne mistake here costs a flight deck and everyone on it.\n\nWeapons free inside the screen perimeter. Kill them all.",
+  "campaign_mission": 6,
+  "environment": {
+    "sea_state": 5,
+    "time_of_day": 6.0,
+    "weather": "rain",
+    "water_depth_m": 250,
+    "thermal_layer_depth_m": 65
+  },
+  "victory_condition": {
+    "type": "destroy_all_enemies",
+    "time_limit_seconds": 3600
+  },
+  "difficulty": {
+    "detection_mult": 0.7,
+    "player_pk_mult": 0.9,
+    "ai_attack_threshold": 0.15
+  },
+  "units": [
+    {
+      "id": "PLAYER_DDG",
+      "platform_id": "ddg_arleigh_burke",
+      "name": "USS Kidd",
+      "faction": "player",
+      "x": 0.0,
+      "y": 0.0,
+      "heading": 90,
+      "speed_kts": 15
+    },
+    {
+      "id": "PLAYER_FFG",
+      "platform_id": "ffg_oliver_hazard_perry",
+      "name": "USS Elrod",
+      "faction": "player",
+      "x": -5.0,
+      "y": 10.0,
+      "heading": 90,
+      "speed_kts": 15
+    },
+    {
+      "id": "PLAYER_SSN",
+      "platform_id": "ssn_los_angeles",
+      "name": "USS Jacksonville",
+      "faction": "player",
+      "x": 15.0,
+      "y": 5.0,
+      "heading": 90,
+      "speed_kts": 6
+    },
+    {
+      "id": "ENEMY_SSN_1",
+      "platform_id": "ssn_akula",
+      "name": "K-317 Pantera",
+      "faction": "enemy",
+      "x": 35.0,
+      "y": -10.0,
+      "heading": 270,
+      "speed_kts": 10,
+      "behavior": "attack",
+      "behavior_data": {"target_id": "PLAYER_DDG"}
+    },
+    {
+      "id": "ENEMY_SSN_2",
+      "platform_id": "ssn_akula",
+      "name": "K-331 Magadan",
+      "faction": "enemy",
+      "x": 40.0,
+      "y": 15.0,
+      "heading": 250,
+      "speed_kts": 8,
+      "behavior": "attack",
+      "behavior_data": {"target_id": "PLAYER_FFG"}
+    },
+    {
+      "id": "ENEMY_SSN_3",
+      "platform_id": "ssn_akula",
+      "name": "K-391 Bratsk",
+      "faction": "enemy",
+      "x": 45.0,
+      "y": 0.0,
+      "heading": 260,
+      "speed_kts": 6,
+      "behavior": "patrol",
+      "waypoints": [[35, -5], [25, 0], [30, 10], [40, 5], [45, 0]]
+    }
+  ]
+}

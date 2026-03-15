@@ -1,0 +1,57 @@
+{
+  "name": "THRESHOLD Tutorial",
+  "description": "Training exercise. Learn the basics of naval tactical command.",
+  "briefing": "TRAINING EXERCISE -- PACIFIC FLEET\n\nYou command USS Connor (DDG-54), operating in restricted waters off the training range.\n\nThis is a guided exercise. Follow the on-screen prompts to learn the system.\n\nTake your time.",
+  "tutorial": true,
+  "environment": {
+    "sea_state": 2,
+    "time_of_day": 10.0,
+    "weather": "clear",
+    "water_depth_m": 150,
+    "thermal_layer_depth_m": 60
+  },
+  "victory_condition": {
+    "type": "destroy_all_enemies",
+    "time_limit_seconds": 0
+  },
+  "units": [
+    {
+      "id": "TUT_PLAYER",
+      "platform_id": "ddg_arleigh_burke",
+      "name": "USS Connor",
+      "faction": "player",
+      "x": 0.0,
+      "y": 0.0,
+      "heading": 0,
+      "speed_kts": 0
+    },
+    {
+      "id": "TUT_ENEMY_SURFACE",
+      "platform_id": "ddg_udaloy",
+      "name": "Soviet Warship",
+      "faction": "enemy",
+      "x": 0.0,
+      "y": -18.0,
+      "heading": 180,
+      "speed_kts": 0,
+      "behavior": "hold",
+      "override_countermeasures": {
+        "has_ciws": false,
+        "has_chaff": false,
+        "has_decoy": false
+      }
+    },
+    {
+      "id": "TUT_ENEMY_SUB",
+      "platform_id": "ssn_akula",
+      "name": "Soviet Submarine",
+      "faction": "enemy",
+      "x": 40.0,
+      "y": -40.0,
+      "heading": 90,
+      "speed_kts": 4,
+      "behavior": "patrol",
+      "waypoints": [[40, -40], [45, -35], [35, -45], [40, -40]]
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "name": "SOSUS Ghost",
+  "description": "SOSUS has a contact that doesn't match any known signature. Find it. Classify it. Decide what to do.",
+  "briefing": "CLASSIFICATION: SECRET\n\nTO: Commander, Patrol Group DELTA\nFROM: COMNAVAIRLANT INTEL WATCH\nDTG: 151800Z NOV 1985\n\nSOSUS ALPHA reports a contact bearing 047 from the Reykjanes Ridge sensor.\n\nThe classification reads UNKNOWN.\n\nAcoustic signature does not match Akula, Victor III, or any cataloged submarine. It is slow. It is deep. It is heading south.\n\nIn twenty years of SOSUS data, that word has appeared exactly twice before.\n\nYour assets are on station. Find it before it reaches water that hides it from everything.\n\nWeapons free on confirmed hostile subsurface contacts only. Confirm before you fire.",
+  "campaign_mission": 3,
+  "environment": {
+    "sea_state": 2,
+    "time_of_day": 18.0,
+    "weather": "clear",
+    "water_depth_m": 500,
+    "thermal_layer_depth_m": 90
+  },
+  "victory_condition": {
+    "type": "destroy_all_enemies",
+    "time_limit_seconds": 9000
+  },
+  "difficulty": {
+    "detection_mult": 0.8,
+    "player_pk_mult": 1.0,
+    "ai_attack_threshold": 0.4
+  },
+  "units": [
+    {
+      "id": "PLAYER_DDG",
+      "platform_id": "ddg_arleigh_burke",
+      "name": "USS Kidd",
+      "faction": "player",
+      "x": 0.0,
+      "y": 0.0,
+      "heading": 45,
+      "speed_kts": 8
+    },
+    {
+      "id": "PLAYER_SSN",
+      "platform_id": "ssn_los_angeles",
+      "name": "USS Jacksonville",
+      "faction": "player",
+      "x": 10.0,
+      "y": -5.0,
+      "heading": 45,
+      "speed_kts": 5
+    },
+    {
+        "id": "PLAYER_MPA",
+        "platform_id": "p3c_orion",
+        "name": "DAGGER 01",
+        "faction": "player",
+        "x": -15.0,
+        "y": 10.0,
+        "heading": 180,
+        "speed_kts": 200,
+        "is_airborne": true,
+        "altitude_ft": 1000,
+        "waypoints": [[-10, -10], [10, -20], [-5, -30], [-15, -15], [-10, 10]]
+    },
+    {
+      "id": "ENEMY_SSN_GHOST",
+      "platform_id": "ssn_akula",
+      "name": "Unknown Contact",
+      "faction": "enemy",
+      "x": 30.0,
+      "y": -40.0,
+      "heading": 190,
+      "speed_kts": 4,
+      "behavior": "patrol",
+      "waypoints": [[25, -55], [20, -70], [15, -85], [10, -100]]
+    }
+  ],
+  "sosus": [
+    {
+      "id": "SOSUS_ALPHA",
+      "x1": -50.0,
+      "y1": -30.0,
+      "x2": 50.0,
+      "y2": -30.0,
+      "sensitivity_db": 90.0
+    }
+  ]
+}

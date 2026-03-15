@@ -1,0 +1,90 @@
+{
+  "name": "Cold Passage",
+  "description": "A Soviet surface group is transiting south through the Norwegian Sea. Shadow them. Do not lose contact.",
+  "briefing": "CLASSIFICATION: SECRET\n\nTO: Commander, Patrol Group DELTA\nFROM: COMNAVAIRLANT\nDTG: 121400Z NOV 1985\n\nSoviet surface group — one Kirov-class, two Udaloy escorts — transiting the Norwegian Sea on heading 210.\n\nYour orders: shadow the formation. Maintain contact. Do not close inside 30 NM.\n\nOne of the Udaloys broke formation twenty minutes ago and is sprinting toward your last reported position.\n\nThey are not lost. They know exactly where you are.\n\nWeapons free only if fired upon.",
+  "campaign_mission": 2,
+  "environment": {
+    "sea_state": 3,
+    "time_of_day": 14.0,
+    "weather": "overcast",
+    "water_depth_m": 400,
+    "thermal_layer_depth_m": 70
+  },
+  "victory_condition": {
+    "type": "destroy_all_enemies",
+    "time_limit_seconds": 5400
+  },
+  "difficulty": {
+    "detection_mult": 1.0,
+    "player_pk_mult": 1.0,
+    "ai_attack_threshold": 0.3
+  },
+  "units": [
+    {
+      "id": "PLAYER_DDG",
+      "platform_id": "ddg_arleigh_burke",
+      "name": "USS Kidd",
+      "faction": "player",
+      "x": 0.0,
+      "y": 0.0,
+      "heading": 210,
+      "speed_kts": 15
+    },
+    {
+      "id": "PLAYER_FFG",
+      "platform_id": "ffg_oliver_hazard_perry",
+      "name": "USS Elrod",
+      "faction": "player",
+      "x": 5.0,
+      "y": 3.0,
+      "heading": 210,
+      "speed_kts": 15
+    },
+    {
+      "id": "PLAYER_SSN",
+      "platform_id": "ssn_los_angeles",
+      "name": "USS Jacksonville",
+      "faction": "player",
+      "x": -10.0,
+      "y": -15.0,
+      "heading": 200,
+      "speed_kts": 6
+    },
+    {
+      "id": "ENEMY_UDALOY",
+      "platform_id": "ddg_udaloy",
+      "name": "Marshal Shaposhnikov",
+      "faction": "enemy",
+      "x": -5.0,
+      "y": -35.0,
+      "heading": 30,
+      "speed_kts": 25,
+      "behavior": "attack",
+      "behavior_data": {"target_id": "PLAYER_DDG"}
+    },
+    {
+      "id": "ENEMY_KIROV",
+      "platform_id": "cgn_kirov",
+      "name": "Frunze",
+      "faction": "enemy",
+      "x": -20.0,
+      "y": -50.0,
+      "heading": 210,
+      "speed_kts": 18,
+      "behavior": "patrol",
+      "waypoints": [[-30, -70], [-40, -90], [-30, -70]]
+    },
+    {
+      "id": "ENEMY_UDALOY_2",
+      "platform_id": "ddg_udaloy",
+      "name": "Admiral Tributs",
+      "faction": "enemy",
+      "x": -15.0,
+      "y": -48.0,
+      "heading": 210,
+      "speed_kts": 18,
+      "behavior": "patrol",
+      "waypoints": [[-25, -68], [-35, -88], [-25, -68]]
+    }
+  ]
+}

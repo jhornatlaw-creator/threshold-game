@@ -1,0 +1,229 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/Main.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/RenderBridge.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/HUD.gd" id="3"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_help"]
+bg_color = Color(0.06, 0.1, 0.2, 0.85)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.25, 0.55, 0.85, 0.7)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1")
+
+[node name="RenderBridge" type="Node2D" parent="."]
+script = ExtResource("2")
+
+[node name="Camera2D" type="Camera2D" parent="RenderBridge"]
+position = Vector2(0, 0)
+zoom = Vector2(0.8, 0.8)
+enabled = true
+
+[node name="Ocean" type="ColorRect" parent="RenderBridge"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -5000.0
+offset_top = -5000.0
+offset_right = 5000.0
+offset_bottom = 5000.0
+color = Color(0.04, 0.08, 0.16, 1)
+mouse_filter = 2
+
+[node name="UnitsLayer" type="Node2D" parent="RenderBridge"]
+
+[node name="WeaponsLayer" type="Node2D" parent="RenderBridge"]
+
+[node name="EffectsLayer" type="Node2D" parent="RenderBridge"]
+
+[node name="UILayer" type="CanvasLayer" parent="RenderBridge"]
+
+[node name="HUD" type="Control" parent="RenderBridge/UILayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("3")
+
+[node name="TopBar" type="HBoxContainer" parent="RenderBridge/UILayer/HUD"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 40.0
+theme_override_constants/separation = 30
+
+[node name="ScenarioLabel" type="Label" parent="RenderBridge/UILayer/HUD/TopBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 14
+text = "THRESHOLD"
+
+[node name="TimeLabel" type="Label" parent="RenderBridge/UILayer/HUD/TopBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 1, 0.3, 1)
+theme_override_font_sizes/font_size = 16
+text = "00:00:00"
+
+[node name="SpeedLabel" type="Label" parent="RenderBridge/UILayer/HUD/TopBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.3, 1)
+theme_override_font_sizes/font_size = 14
+text = "x1"
+
+[node name="PauseLabel" type="Label" parent="RenderBridge/UILayer/HUD/TopBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
+theme_override_font_sizes/font_size = 16
+text = "PAUSED"
+
+[node name="UnitPanel" type="PanelContainer" parent="RenderBridge/UILayer/HUD"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -320.0
+offset_right = 280.0
+offset_bottom = -10.0
+
+[node name="VBox" type="VBoxContainer" parent="RenderBridge/UILayer/HUD/UnitPanel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="UnitName" type="Label" parent="RenderBridge/UILayer/HUD/UnitPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.8, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "Unit Name"
+
+[node name="UnitClass" type="Label" parent="RenderBridge/UILayer/HUD/UnitPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 11
+text = "Class Name"
+
+[node name="SpeedInfo" type="Label" parent="RenderBridge/UILayer/HUD/UnitPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 12
+text = "SPD: 0 kts"
+
+[node name="HeadingInfo" type="Label" parent="RenderBridge/UILayer/HUD/UnitPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 12
+text = "HDG: 000"
+
+[node name="DepthInfo" type="Label" parent="RenderBridge/UILayer/HUD/UnitPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.7, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "SURFACE"
+
+[node name="DamageInfo" type="Label" parent="RenderBridge/UILayer/HUD/UnitPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
+theme_override_font_sizes/font_size = 12
+text = ""
+
+[node name="WeaponsInfo" type="Label" parent="RenderBridge/UILayer/HUD/UnitPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.6, 1)
+theme_override_font_sizes/font_size = 11
+text = "WEAPONS:"
+
+[node name="SensorsInfo" type="Label" parent="RenderBridge/UILayer/HUD/UnitPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 1, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "SENSORS:"
+
+[node name="ContactsPanel" type="PanelContainer" parent="RenderBridge/UILayer/HUD"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_top = 50.0
+offset_right = -10.0
+offset_bottom = 400.0
+
+[node name="VBox" type="VBoxContainer" parent="RenderBridge/UILayer/HUD/ContactsPanel"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="RenderBridge/UILayer/HUD/ContactsPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.6, 0.2, 1)
+theme_override_font_sizes/font_size = 13
+text = "CONTACTS"
+
+[node name="ContactsList" type="VBoxContainer" parent="RenderBridge/UILayer/HUD/ContactsPanel/VBox"]
+layout_mode = 2
+
+[node name="ResultPanel" type="PanelContainer" parent="RenderBridge/UILayer/HUD"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -80.0
+offset_right = 200.0
+offset_bottom = 80.0
+visible = false
+
+[node name="ResultLabel" type="Label" parent="RenderBridge/UILayer/HUD/ResultPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+vertical_alignment = 1
+text = ""
+
+[node name="HelpPanel" type="PanelContainer" parent="RenderBridge/UILayer/HUD"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 290.0
+offset_top = -290.0
+offset_right = 590.0
+offset_bottom = -10.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_help")
+
+[node name="HelpLabel" type="Label" parent="RenderBridge/UILayer/HUD/HelpPanel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.95, 1.0, 1)
+theme_override_font_sizes/font_size = 13
+text = "CONTROLS
+─────────────────
+LClick      Select / Designate
+RClick      Set waypoint
+Shift+RClick  Add waypoint
+F           Fire weapon
+C           Cycle weapon
+L           Launch helicopter
+W / X       Speed +/- 5kts
+[ / ]       Depth (subs only)
+SPACE       Pause / Resume
+1-5         Time scale
+R           Toggle radar
+S           Toggle sonar
+Tab         Cycle units
+H           Center camera
+Scroll      Zoom in/out
+Mid-Drag    Pan map
+ESC         Return to menu"

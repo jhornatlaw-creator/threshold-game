@@ -1,0 +1,103 @@
+{
+  "name": "Crossing the Line",
+  "description": "A Soviet torpedo struck USS Hayler during VERTREP. The ROE is now unrestricted. Find them. Sink them.",
+  "briefing": "CLASSIFICATION: SECRET -- FLASH\n\nTO: All NATO Maritime Forces, North Atlantic\nFROM: SACLANT\nDTG: 200430Z NOV 1985\n\nAt 200415Z, USS Hayler (DD-997) was struck by a torpedo during vertical replenishment operations west of the Faroes.\n\nHayler is listing 15 degrees and taking water forward. 23 crew missing.\n\nThis was not an accident. Attack profile analysis confirms deliberate engagement by submarine-launched weapon, probable Type 65.\n\nEffective immediately: weapons free on all confirmed hostile contacts. Surface, subsurface, air.\n\nYour assets are the nearest available force. A Soviet SSN group is operating in your sector. Intelligence suggests two boats, possibly three.\n\nThey crossed the line. End this.\n\nTime is critical. Soviet reserve forces are 90 minutes from your position.",
+  "campaign_mission": 5,
+  "environment": {
+    "sea_state": 4,
+    "time_of_day": 4.5,
+    "weather": "overcast",
+    "water_depth_m": 280,
+    "thermal_layer_depth_m": 75
+  },
+  "victory_condition": {
+    "type": "destroy_all_enemies",
+    "time_limit_seconds": 5400
+  },
+  "difficulty": {
+    "detection_mult": 0.85,
+    "player_pk_mult": 1.0,
+    "ai_attack_threshold": 0.2
+  },
+  "units": [
+    {
+      "id": "PLAYER_DDG",
+      "platform_id": "ddg_arleigh_burke",
+      "name": "USS Kidd",
+      "faction": "player",
+      "x": 0.0,
+      "y": 0.0,
+      "heading": 270,
+      "speed_kts": 20
+    },
+    {
+      "id": "PLAYER_FFG",
+      "platform_id": "ffg_oliver_hazard_perry",
+      "name": "USS Elrod",
+      "faction": "player",
+      "x": 5.0,
+      "y": 5.0,
+      "heading": 270,
+      "speed_kts": 18
+    },
+    {
+      "id": "PLAYER_SSN",
+      "platform_id": "ssn_los_angeles",
+      "name": "USS Jacksonville",
+      "faction": "player",
+      "x": -15.0,
+      "y": -10.0,
+      "heading": 270,
+      "speed_kts": 8
+    },
+    {
+        "id": "PLAYER_MPA",
+        "platform_id": "p3c_orion",
+        "name": "DAGGER 02",
+        "faction": "player",
+        "x": -20.0,
+        "y": 15.0,
+        "heading": 150,
+        "speed_kts": 200,
+        "is_airborne": true,
+        "altitude_ft": 1500,
+        "waypoints": [[-10, 0], [5, -15], [-5, -25], [-15, -10], [-20, 15]]
+    },
+    {
+      "id": "ENEMY_SSN_1",
+      "platform_id": "ssn_akula",
+      "name": "K-317 Pantera",
+      "faction": "enemy",
+      "x": -25.0,
+      "y": -15.0,
+      "heading": 90,
+      "speed_kts": 8,
+      "behavior": "attack",
+      "behavior_data": {"target_id": "PLAYER_DDG"}
+    },
+    {
+      "id": "ENEMY_SSN_2",
+      "platform_id": "ssn_akula",
+      "name": "K-331 Magadan",
+      "faction": "enemy",
+      "x": -30.0,
+      "y": 10.0,
+      "heading": 135,
+      "speed_kts": 6,
+      "behavior": "patrol",
+      "waypoints": [[-20, 0], [-10, -10], [-20, -20], [-30, -10], [-30, 10]]
+    },
+    {
+      "id": "ENEMY_SSN_3",
+      "platform_id": "ssn_akula",
+      "name": "K-391 Bratsk",
+      "faction": "enemy",
+      "x": -40.0,
+      "y": -5.0,
+      "heading": 45,
+      "speed_kts": 4,
+      "behavior": "patrol",
+      "waypoints": [[-35, 5], [-25, 15], [-35, 25], [-45, 15], [-40, -5]]
+    }
+  ]
+}
