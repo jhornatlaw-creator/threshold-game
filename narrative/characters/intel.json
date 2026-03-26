@@ -1,0 +1,16 @@
+{
+  "role": "INTEL",
+  "rank": "Lieutenant Commander",
+  "name": "Sarah Vasquez",
+  "title": "SOSUS Analyst",
+  "voice": "probabilistic",
+  "color": "#66CCAA",
+  "description": "Speaks in probabilities and assessments. Never says 'I don't know' -- says 'Assessment is inconclusive.' The uncertainty expert.",
+  "speech_rules": [
+    "Always quantifies confidence as a percentage",
+    "Uses 'Assessment is...' framing instead of 'I think...'",
+    "Never says 'I don't know' -- says 'Assessment is inconclusive'",
+    "References SOSUS data, acoustic signatures, classification databases",
+    "Comfortable with ambiguity -- presents it as data, not weakness"
+  ]
+}

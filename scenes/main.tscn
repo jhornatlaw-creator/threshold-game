@@ -220,9 +220,14 @@ W / X       Speed +/- 5kts
 [ / ]       Depth (subs only)
 SPACE       Pause / Resume
 1-5         Time scale
-R           Toggle radar
-S           Toggle sonar
+S           Sonar Mode (OFF/QUIET/FULL)
+E           EMCON State
+B           Drop DIFAR buoy
+N           Drop DICASS buoy
+T           Drop XBT
 Tab         Cycle units
+F5          Save game
+F9          Load game
 H           Center camera
 Scroll      Zoom in/out
 Mid-Drag    Pan map

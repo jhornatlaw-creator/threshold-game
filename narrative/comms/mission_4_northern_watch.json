@@ -1,0 +1,35 @@
+{
+  "mission_id": 4,
+  "mission_name": "NORTHERN WATCH",
+  "scenario_file": "campaign_04_northern_watch.json",
+  "comms": [
+    {
+      "id": "m4_radar_paint",
+      "trigger": "esm_detection",
+      "trigger_params": {
+        "radar_type": "fire_control"
+      },
+      "lines": [
+        {
+          "role": "COMMS",
+          "text": "Fire control radar. Bearing zero-four-five. Band Eight. Correlates with Top Pair."
+        },
+        {
+          "role": "COMMS",
+          "text": "He is painting us, Commander.",
+          "delay_ms": 1500
+        }
+      ]
+    },
+    {
+      "id": "m4_active_sonar_warning",
+      "trigger": "player_active_sonar",
+      "lines": [
+        {
+          "role": "COMMAND",
+          "text": "Patrol Group DELTA, COMNAVAIRLANT. We are reading active sonar emissions from your position. Cease immediately. Acknowledge."
+        }
+      ]
+    }
+  ]
+}

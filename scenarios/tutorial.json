@@ -1,19 +1,22 @@
 {
   "name": "THRESHOLD Tutorial",
   "description": "Training exercise. Learn the basics of naval tactical command.",
-  "briefing": "TRAINING EXERCISE -- PACIFIC FLEET\n\nYou command USS Connor (DDG-54), operating in restricted waters off the training range.\n\nThis is a guided exercise. Follow the on-screen prompts to learn the system.\n\nTake your time.",
+  "briefing": "TRAINING EXERCISE -- PACIFIC FLEET\n\nYou command USS Connor (DD-979), operating in restricted waters off the training range.\n\nThis is a guided exercise. Follow the on-screen prompts to learn the system.\n\nTake your time.",
   "tutorial": true,
   "environment": {
     "sea_state": 2,
     "time_of_day": 10.0,
     "weather": "clear",
     "water_depth_m": 150,
-    "thermal_layer_depth_m": 60
+    "bottom_depth_m": 200,
+    "thermal_layer_depth_m": 60,
+    "thermal_layer_strength": 0.5
   },
   "victory_condition": {
     "type": "destroy_all_enemies",
     "time_limit_seconds": 0
   },
+  "roe_state": "WEAPONS_FREE",
   "difficulty": {
     "detection_mult": 1.0,
     "player_pk_mult": 1.0,
@@ -22,7 +25,7 @@
   "units": [
     {
       "id": "TUT_PLAYER",
-      "platform_id": "ddg_arleigh_burke",
+      "platform_id": "dd_spruance",
       "name": "USS Connor",
       "faction": "player",
       "x": 0.0,

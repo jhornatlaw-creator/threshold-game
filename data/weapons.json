@@ -12,6 +12,7 @@
       "loadout_default": 8,
       "min_range_nm": 3,
       "flight_profile": "sea_skim",
+      "wire_guided": false,
       "confidence_tier": {
         "max_range_nm": 1,
         "speed_kts": 1,
@@ -33,6 +34,7 @@
       "loadout_default": 68,
       "min_range_nm": 1,
       "flight_profile": "ballistic_terminal",
+      "wire_guided": false,
       "confidence_tier": {
         "max_range_nm": 1,
         "speed_kts": 1,
@@ -56,6 +58,7 @@
       "search_pattern": "snake",
       "max_depth_m": 370,
       "sub_damage": 0.45,
+      "wire_guided": false,
       "confidence_tier": {
         "max_range_nm": 1,
         "speed_kts": 1,
@@ -70,14 +73,17 @@
       "name": "ASROC (RUR-5)",
       "type": "torpedo",
       "guidance": "rocket_acoustic",
-      "max_range_nm": 12,
+      "max_range_nm": 6,
       "speed_kts": 300,
       "warhead_kg": 44,
       "pk_base": 0.62,
       "loadout_default": 8,
       "min_range_nm": 1.5,
       "sub_damage": 0.45,
-      "description": "Anti-Submarine Rocket. Rocket-boosted Mk 46 torpedo delivery. Extends ASW engagement range beyond hull sonar range."
+      "wire_guided": false,
+      "splash_warning_seconds": 30,
+      "splash_pk_reduction": 0.85,
+      "description": "Anti-Submarine Rocket. Rocket-boosted Mk 46 torpedo delivery. Range ~6nm. Fast time-on-target but splash-down gives target ~30 seconds warning. 8 ready rounds per Spruance loadout."
     },
     {
       "id": "type65_torpedo",
@@ -93,6 +99,7 @@
       "search_pattern": "spiral",
       "max_depth_m": 500,
       "sub_damage": 0.65,
+      "wire_guided": false,
       "confidence_tier": {
         "max_range_nm": 2,
         "speed_kts": 1,
@@ -100,23 +107,25 @@
         "pk_base": 3,
         "loadout_default": 2
       },
-      "description": "Soviet heavyweight torpedo. 650mm diameter. Wake-homing guidance. Massive warhead capable of mission-killing any surface ship. Long range."
+      "description": "Soviet heavyweight torpedo. 650mm diameter. Wake-homing guidance. Massive warhead capable of mission-killing any surface ship. Counter by slowing below 5 kts or sharp course change >90 degrees."
     },
     {
-      "id": "mk48_adcap",
-      "name": "Mk 48 ADCAP",
+      "id": "mk48_mod4",
+      "name": "Mk 48 Mod 4",
       "type": "torpedo",
       "guidance": "wire_acoustic",
-      "max_range_nm": 27,
+      "max_range_nm": 23,
       "speed_kts": 55,
       "warhead_kg": 295,
-      "pk_base": 0.75,
-      "loadout_default": 20,
+      "pk_base": 0.70,
+      "loadout_default": 14,
       "min_range_nm": 0.5,
       "search_pattern": "snake",
       "max_depth_m": 800,
       "sub_damage": 0.70,
-      "description": "Heavyweight wire-guided torpedo. Primary US submarine weapon. Active/passive acoustic homing with wire guidance for mid-course corrections."
+      "wire_guided": true,
+      "wire_length_nm": 20,
+      "description": "Heavyweight wire-guided torpedo. Primary US submarine weapon in the 1980s. Active/passive acoustic homing with wire guidance (~20nm wire). While on wire: +0.15 Pk bonus but launching unit speed limited to 10 kts, no turns >30 degrees. Player can CUT WIRE at any time to maneuver freely (weapon switches to autonomous seeker, Pk drops by 0.15). Wire breaks automatically if speed/turn limits exceeded or wire length exceeded."
     },
     {
       "id": "p700_granit",
@@ -132,6 +141,7 @@
       "flight_profile": "high_dive",
       "ciws_effectiveness_mult": 0.25,
       "pk_profile_bonus": 0.10,
+      "wire_guided": false,
       "description": "Supersonic anti-ship cruise missile. Mach 2.5 with 750kg warhead. Primary armament of Kirov-class. Inertial midcourse with active radar terminal homing. Extreme speed makes CIWS intercept nearly impossible."
     },
     {
@@ -146,7 +156,10 @@
       "loadout_default": 8,
       "min_range_nm": 3,
       "sub_damage": 0.50,
-      "description": "Anti-submarine missile delivering a torpedo to the target area. Soviet equivalent of ASROC but with significantly greater range."
+      "wire_guided": false,
+      "splash_warning_seconds": 25,
+      "splash_pk_reduction": 0.85,
+      "description": "Anti-submarine missile delivering a torpedo to the target area. Soviet equivalent of ASROC but with significantly greater range. Splash-down gives target warning."
     },
     {
       "id": "set65_torpedo",
@@ -162,6 +175,7 @@
       "search_pattern": "snake",
       "max_depth_m": 400,
       "sub_damage": 0.55,
+      "wire_guided": false,
       "description": "Soviet 533mm anti-submarine torpedo. Acoustic homing. Standard torpedo on Udaloy-class destroyers."
     }
   ]

@@ -1,0 +1,11 @@
+{
+  "interlude_id": "between_5_6",
+  "after_mission": 5,
+  "before_mission": 6,
+  "type": "operational_summary",
+  "classification": "SECRET",
+  "text": "OPERATIONAL SUMMARY 200600Z NOV 1985\n\nHostile submarine losses in GIUK sector: [REDACTED]\nNATO losses: USS Hayler (DD-997) \u2014 sunk. {player_losses}\nSoviet surface forces withdrawing to Norwegian Sea.\nCarrier Battle Group ALFA ordered forward to support barrier operations.\n\nAll ASW forces prepare for surge operations.",
+  "dynamic_fields": {
+    "player_losses": "campaign_lost_ships"
+  }
+}

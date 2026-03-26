@@ -23,11 +23,15 @@ var _selected_unit_id: String = ""
 var _fire_target_id: String = ""  # Item 1: designated fire target (click enemy contact)
 var _selected_weapon_id: String = ""  # Manually selected weapon type for firing
 var _player_contacts: Dictionary = {}  # target_id -> latest detection dict (from player units)
+var _bearing_lines: Dictionary = {}  # target_id -> Line2D (bearing line for passive contacts)
+var _uncertainty_visuals: Dictionary = {}  # target_id -> Node2D (uncertainty zone visual)
 var _player_unit_ids: Array = []  # M-6: ordered list of player unit IDs for Tab cycling
 var _player_cycle_index: int = -1
 var _result_shown: bool = false  # Item 10: track if result screen is visible
 var _lost_contact_timers: Dictionary = {}  # target_id -> ticks remaining for last-known datum
 var _route_line: Line2D = null  # Waypoint route line for selected player unit
+var _sonobuoy_visuals: Dictionary = {}  # buoy_id -> Node2D (sonobuoy icon on map)
+var _sonobuoy_bearing_lines: Dictionary = {}  # "buoy_id:target_id" -> Line2D
 
 # Tutorial integration signals
 signal unit_selected(unit_id: String)
@@ -64,6 +68,26 @@ func _exit_tree() -> void:
 		[SimulationWorld.aircraft_bingo, _on_aircraft_bingo],
 		[SimulationWorld.aircraft_landed, _on_aircraft_landed],
 		[SimulationWorld.aircraft_crashed, _on_aircraft_crashed],
+		[SimulationWorld.tma_solution_updated, _on_tma_solution_updated],
+		[SimulationWorld.tma_contact_lost, _on_tma_contact_lost],
+		[SimulationWorld.xbt_dropped, _on_xbt_dropped],
+		[SimulationWorld.submarine_went_deep, _on_submarine_went_deep],
+		[SimulationWorld.sonobuoy_deployed, _on_sonobuoy_deployed],
+		[SimulationWorld.sonobuoy_contact, _on_sonobuoy_contact],
+		[SimulationWorld.sonobuoy_expired, _on_sonobuoy_expired],
+		[SimulationWorld.sonobuoy_dicass_contact, _on_sonobuoy_dicass_contact],
+		[SimulationWorld.sonobuoy_dicass_alert, _on_sonobuoy_dicass_alert],
+		[SimulationWorld.emcon_state_changed, _on_emcon_state_changed],
+		[SimulationWorld.counter_detection_event, _on_counter_detection_event],
+		[SimulationWorld.esm_contact_detected, _on_esm_contact_detected],
+		[SimulationWorld.torpedo_launched, _on_torpedo_launched],
+		[SimulationWorld.weapon_impact, _on_weapon_impact],
+		[SimulationWorld.roe_changed, _on_roe_changed],
+		[SimulationWorld.roe_blocked, _on_roe_blocked],
+		[SimulationWorld.contact_classification_changed, _on_contact_classification_changed],
+		[SimulationWorld.kill_confirmed, _on_kill_confirmed],
+		[SimulationWorld.wire_cut, _on_wire_cut],
+		[SimulationWorld.countermeasure_deployed, _on_countermeasure_deployed],
 	]
 	for pair in sigs:
 		if pair[0].is_connected(pair[1]):
@@ -100,6 +124,27 @@ func _connect_signals() -> void:
 	SimulationWorld.aircraft_bingo.connect(_on_aircraft_bingo)
 	SimulationWorld.aircraft_landed.connect(_on_aircraft_landed)
 	SimulationWorld.aircraft_crashed.connect(_on_aircraft_crashed)
+	SimulationWorld.tma_solution_updated.connect(_on_tma_solution_updated)
+	SimulationWorld.tma_contact_lost.connect(_on_tma_contact_lost)
+	SimulationWorld.xbt_dropped.connect(_on_xbt_dropped)
+	SimulationWorld.submarine_went_deep.connect(_on_submarine_went_deep)
+	SimulationWorld.sonobuoy_deployed.connect(_on_sonobuoy_deployed)
+	SimulationWorld.sonobuoy_contact.connect(_on_sonobuoy_contact)
+	SimulationWorld.sonobuoy_expired.connect(_on_sonobuoy_expired)
+	SimulationWorld.sonobuoy_dicass_contact.connect(_on_sonobuoy_dicass_contact)
+	SimulationWorld.sonobuoy_dicass_alert.connect(_on_sonobuoy_dicass_alert)
+	SimulationWorld.emcon_state_changed.connect(_on_emcon_state_changed)
+	SimulationWorld.counter_detection_event.connect(_on_counter_detection_event)
+	SimulationWorld.esm_contact_detected.connect(_on_esm_contact_detected)
+	SimulationWorld.torpedo_launched.connect(_on_torpedo_launched)
+	SimulationWorld.weapon_impact.connect(_on_weapon_impact)
+	SimulationWorld.roe_changed.connect(_on_roe_changed)
+	SimulationWorld.roe_blocked.connect(_on_roe_blocked)
+	SimulationWorld.contact_classification_changed.connect(_on_contact_classification_changed)
+	SimulationWorld.kill_confirmed.connect(_on_kill_confirmed)
+	SimulationWorld.wire_cut.connect(_on_wire_cut)
+	SimulationWorld.countermeasure_deployed.connect(_on_countermeasure_deployed)
+	# crisis_temperature_changed: intentionally unwired -- hidden from player
 
 func _setup_camera() -> void:
 	if camera:
@@ -153,6 +198,8 @@ func _on_unit_destroyed(unit_id: String) -> void:
 			_fire_target_id = ""
 	# Clean up stale entries for destroyed unit
 	_player_contacts.erase(unit_id)
+	_remove_bearing_line(unit_id)
+	_remove_uncertainty_zone(unit_id)
 	_player_unit_ids.erase(unit_id)
 	_player_cycle_index = -1  # Reset Tab cycling after force change
 
@@ -166,6 +213,8 @@ func _on_unit_detected(detector_id: String, target_id: String, detection: Dictio
 	var is_new_contact: bool = target_id not in _player_contacts
 	if is_new_contact:
 		AudioManager.play_contact_new()
+		# Phase 9: audio-first detection -- screw beats before display confirmation
+		AudioManager.queue_audio_first_detection(target_id, detection.get("bearing", 0.0), 2.5)
 		if hud and hud.has_method("flash_new_contact"):
 			hud.flash_new_contact()
 
@@ -173,35 +222,44 @@ func _on_unit_detected(detector_id: String, target_id: String, detection: Dictio
 	# Item 6: cancel any pending lost-contact timer on re-detection
 	_lost_contact_timers.erase(target_id)
 
-	# Show contact marker -- make hidden enemy visuals visible or create contact marker
-	if target_id in _unit_visuals:
-		var visual: Node2D = _unit_visuals[target_id]
-		visual.visible = true
-		# Update position from detection estimate (not exact -- fog of war)
-		var det_pos: Vector2 = detector_data.get("position", Vector2.ZERO)
-		var bearing_rad: float = deg_to_rad(detection.get("bearing", 0.0))
-		var range_est: float = detection.get("range_est", 10.0)
-		var est_pos: Vector2 = det_pos + Vector2(sin(bearing_rad), -cos(bearing_rad)) * range_est
-		visual.position = est_pos * NM_TO_PX
-		# Update label to show designator (Item 6: restore alpha from LK fade)
-		var classification: Dictionary = detection.get("classification", {})
-		var label = visual.find_child("Label")
-		if label and classification.has("designator"):
-			label.text = classification["designator"]
-			label.modulate.a = 1.0
-		var symbol = visual.find_child("Symbol")
-		if symbol and symbol.has_method("set_detected"):
-			symbol.set_detected(true, detection)
+	var is_bearing_only: bool = detection.get("bearing_only", false)
+	var det_pos: Vector2 = detector_data.get("position", Vector2.ZERO)
+	var bearing_deg: float = detection.get("bearing", 0.0)
+	var bearing_rad: float = deg_to_rad(bearing_deg)
+	var bearing_dir: Vector2 = Vector2(sin(bearing_rad), -cos(bearing_rad))
+
+	if is_bearing_only:
+		# BEARING-ONLY CONTACT: draw a bearing line from detector to map edge
+		_update_bearing_line(target_id, det_pos, bearing_dir, detection)
+		# Hide positioned icon if it exists (was a ranged contact that lost range)
+		if target_id in _unit_visuals:
+			_unit_visuals[target_id].visible = false
 	else:
-		# Create a contact marker for unknown entity
-		var contact_visual := _create_contact_visual(target_id, detection)
-		var det_pos: Vector2 = detector_data.get("position", Vector2.ZERO)
-		var bearing_rad: float = deg_to_rad(detection.get("bearing", 0.0))
+		# RANGED CONTACT: positioned icon (radar, active sonar, or TMA solution)
 		var range_est: float = detection.get("range_est", 10.0)
-		var pos: Vector2 = det_pos + Vector2(sin(bearing_rad), -cos(bearing_rad)) * range_est
-		contact_visual.position = pos * NM_TO_PX
-		units_layer.add_child(contact_visual)
-		_unit_visuals[target_id] = contact_visual
+		var est_pos: Vector2 = det_pos + bearing_dir * range_est
+		# Remove bearing line if contact upgraded from bearing-only to ranged
+		_remove_bearing_line(target_id)
+
+		if target_id in _unit_visuals:
+			var visual: Node2D = _unit_visuals[target_id]
+			visual.visible = true
+			visual.position = est_pos * NM_TO_PX
+			# Update label to show designator (Item 6: restore alpha from LK fade)
+			var classification: Dictionary = detection.get("classification", {})
+			var label = visual.find_child("Label")
+			if label and classification.has("designator"):
+				label.text = classification["designator"]
+				label.modulate.a = 1.0
+			var symbol = visual.find_child("Symbol")
+			if symbol and symbol.has_method("set_detected"):
+				symbol.set_detected(true, detection)
+		else:
+			# Create a contact marker for unknown entity
+			var contact_visual := _create_contact_visual(target_id, detection)
+			contact_visual.position = est_pos * NM_TO_PX
+			units_layer.add_child(contact_visual)
+			_unit_visuals[target_id] = contact_visual
 
 func _on_detection_lost(_detector_id: String, target_id: String) -> void:
 	# Check if ANY player unit still detects this target
@@ -214,6 +272,11 @@ func _on_detection_lost(_detector_id: String, target_id: String) -> void:
 
 	if not still_detected:
 		_player_contacts.erase(target_id)
+		# Phase 9: stop contact audio
+		AudioManager.stop_contact_audio(target_id)
+		# Clean up TMA visuals for this contact
+		_remove_bearing_line(target_id)
+		_remove_uncertainty_zone(target_id)
 		if target_id in _unit_visuals:
 			var visual: Node2D = _unit_visuals[target_id]
 			var unit_data: Dictionary = SimulationWorld.units.get(target_id, {})
@@ -231,6 +294,8 @@ func _on_detection_lost(_detector_id: String, target_id: String) -> void:
 				_lost_contact_timers[target_id] = 60
 
 func _on_contact_classified(_detector_id: String, target_id: String, detection: Dictionary) -> void:
+	# Phase 9: classification upgrade audio
+	AudioManager.play_classify_upgrade()
 	if target_id in _unit_visuals:
 		var symbol = _unit_visuals[target_id].find_child("Symbol")
 		if symbol and symbol.has_method("update_classification"):
@@ -284,7 +349,11 @@ func _on_weapon_fired(weapon_id: String, _shooter_id: String, _target_id: String
 	# Audio: missile/weapon launch sounds
 	var shooter_faction: String = SimulationWorld.units.get(_shooter_id, {}).get("faction", "")
 	if shooter_faction == "player":
-		AudioManager.play_weapon_launch()
+		# Phase 9: torpedo-specific launch sound
+		if weapon_data.get("type", "") == "torpedo":
+			AudioManager.play_torpedo_launch()
+		else:
+			AudioManager.play_weapon_launch()
 		AudioManager.play_missile_away()
 
 	# EN-1: "TORPEDO IN THE WATER" alert when enemy fires torpedo at player
@@ -341,6 +410,15 @@ func _update_torpedo_warning() -> void:
 # Signal handlers -- scenario / time
 # ---------------------------------------------------------------------------
 func _on_scenario_started(scenario_name: String) -> void:
+	# Clear sonobuoy visuals from previous scenario
+	for buoy_id in _sonobuoy_visuals:
+		if is_instance_valid(_sonobuoy_visuals[buoy_id]):
+			_sonobuoy_visuals[buoy_id].queue_free()
+	_sonobuoy_visuals.clear()
+	for line_key in _sonobuoy_bearing_lines:
+		if is_instance_valid(_sonobuoy_bearing_lines[line_key]):
+			_sonobuoy_bearing_lines[line_key].queue_free()
+	_sonobuoy_bearing_lines.clear()
 	if hud and hud.has_method("show_scenario_name"):
 		hud.show_scenario_name(scenario_name)
 
@@ -352,6 +430,14 @@ func _on_scenario_ended(result: String) -> void:
 func _on_sim_tick(_tick_number: int, _sim_time: float) -> void:
 	_update_hud()
 	_update_selection_visuals()
+	# Phase 9: own-ship speed/heading tracking for flow noise
+	if _selected_unit_id in SimulationWorld.units:
+		var u: Dictionary = SimulationWorld.units[_selected_unit_id]
+		AudioManager.update_ownship_speed(u.get("speed_kts", 0.0))
+		AudioManager.update_ownship_heading(u.get("heading", 0.0))
+	# Phase 9: sea state audio
+	AudioManager.update_sea_state(SimulationWorld.weather_sea_state)
+	_update_bearing_lines_tick()
 	# Item 6: process last-known contact datum timers
 	var expired := []
 	for tid in _lost_contact_timers:
@@ -366,6 +452,8 @@ func _on_sim_tick(_tick_number: int, _sim_time: float) -> void:
 func _on_time_scale_changed(new_scale: float) -> void:
 	if hud and hud.has_method("update_time_scale"):
 		hud.update_time_scale(new_scale)
+	# Phase 9: time compression audio
+	AudioManager.set_time_compression(new_scale)
 
 # ---------------------------------------------------------------------------
 # Visual factory -- Modern Tactical Renderer (Phase 1)
@@ -482,6 +570,393 @@ func _spawn_explosion(pos: Vector2) -> void:
 	var explosion := _ExplosionEffect.new()
 	explosion.position = pos
 	effects_layer.add_child(explosion)
+
+# ---------------------------------------------------------------------------
+# Bearing lines + uncertainty zones (TMA passive contacts)
+# ---------------------------------------------------------------------------
+
+## Draw or update a bearing line from detector to map edge for a passive contact.
+func _update_bearing_line(target_id: String, detector_pos: Vector2, bearing_dir: Vector2,
+		detection: Dictionary) -> void:
+	var line: Line2D
+	if target_id in _bearing_lines:
+		line = _bearing_lines[target_id]
+	else:
+		line = Line2D.new()
+		line.name = "BearingLine_" + target_id
+		line.width = 1.5
+		line.default_color = Color(1.0, 0.6, 0.2, 0.5)  # Amber, semi-transparent
+		units_layer.add_child(line)
+		_bearing_lines[target_id] = line
+
+	# Draw from detector position along bearing to 200 NM (map edge)
+	var start_px: Vector2 = detector_pos * NM_TO_PX
+	var end_px: Vector2 = (detector_pos + bearing_dir * 200.0) * NM_TO_PX
+	line.clear_points()
+	line.add_point(start_px)
+	line.add_point(end_px)
+	line.visible = true
+
+	# Add designator label at a point along the line (~40 NM out)
+	var label_pos: Vector2 = (detector_pos + bearing_dir * 40.0) * NM_TO_PX
+	var classification: Dictionary = detection.get("classification", {})
+	var designator: String = classification.get("designator", "?")
+	var label = line.find_child("BrgLabel")
+	if not label:
+		label = Label.new()
+		label.name = "BrgLabel"
+		label.add_theme_font_size_override("font_size", 10)
+		label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2, 0.8))
+		line.add_child(label)
+	label.text = designator
+	label.position = label_pos - start_px + Vector2(8, -12)
+
+	# TMA quality indicator: color shifts from amber to green as quality improves
+	var tma_quality: float = detection.get("tma_quality", 0.0)
+	if tma_quality > 0.5:
+		var t: float = clampf((tma_quality - 0.5) / 0.5, 0.0, 1.0)
+		line.default_color = Color(
+			lerpf(1.0, 0.3, t),   # R: amber -> green
+			lerpf(0.6, 1.0, t),   # G: amber -> green
+			lerpf(0.2, 0.3, t),   # B
+			lerpf(0.5, 0.7, t)    # A: more opaque as quality improves
+		)
+
+func _remove_bearing_line(target_id: String) -> void:
+	if target_id in _bearing_lines:
+		_bearing_lines[target_id].queue_free()
+		_bearing_lines.erase(target_id)
+
+## Update all bearing lines each tick -- detector position moves, bearing lines follow.
+func _update_bearing_lines_tick() -> void:
+	for target_id in _bearing_lines.keys():
+		if target_id not in _player_contacts:
+			_remove_bearing_line(target_id)
+			continue
+		var detection: Dictionary = _player_contacts[target_id]
+		if not detection.get("bearing_only", false):
+			_remove_bearing_line(target_id)
+			continue
+		# Find the detecting player unit's current position
+		var detector_pos: Vector2 = Vector2.ZERO
+		for uid in SimulationWorld.units:
+			var u: Dictionary = SimulationWorld.units[uid]
+			if u.get("faction", "") == "player" and target_id in u.get("contacts", {}):
+				detector_pos = u["position"]
+				break
+		var bearing_rad: float = deg_to_rad(detection.get("bearing", 0.0))
+		var bearing_dir: Vector2 = Vector2(sin(bearing_rad), -cos(bearing_rad))
+		_update_bearing_line(target_id, detector_pos, bearing_dir, detection)
+
+## Draw or update the uncertainty zone for a TMA contact.
+## Starts as a wide arc along the bearing line, narrows to ellipse, then tight circle.
+func _update_uncertainty_zone(target_id: String, estimated_pos: Vector2,
+		uncertainty_radius: float, quality: float) -> void:
+	if quality < 0.3:
+		# Too low quality -- remove any existing uncertainty zone
+		_remove_uncertainty_zone(target_id)
+		return
+
+	var zone: Node2D
+	if target_id in _uncertainty_visuals:
+		zone = _uncertainty_visuals[target_id]
+	else:
+		zone = Node2D.new()
+		zone.name = "UncertaintyZone_" + target_id
+		units_layer.add_child(zone)
+		_uncertainty_visuals[target_id] = zone
+
+	zone.position = estimated_pos * NM_TO_PX
+	zone.visible = true
+
+	# Remove old draw child and create new one
+	for child in zone.get_children():
+		child.queue_free()
+
+	var draw_node := _UncertaintyDraw.new()
+	draw_node.name = "Draw"
+	draw_node.uncertainty_radius_px = uncertainty_radius * NM_TO_PX
+	draw_node.quality = quality
+	zone.add_child(draw_node)
+
+func _remove_uncertainty_zone(target_id: String) -> void:
+	if target_id in _uncertainty_visuals:
+		_uncertainty_visuals[target_id].queue_free()
+		_uncertainty_visuals.erase(target_id)
+
+## TMA solution updated -- draw/update uncertainty zone and optionally show estimated position
+func _on_tma_solution_updated(contact_id: String, quality: float,
+		estimated_pos: Vector2, uncertainty_radius: float) -> void:
+	# Phase 9: TMA solution audio feedback
+	AudioManager.play_tma_tone(quality)
+	if quality >= 0.3 and estimated_pos != Vector2.ZERO:
+		_update_uncertainty_zone(contact_id, estimated_pos, uncertainty_radius, quality)
+		# At quality > 0.7, show estimated position marker
+		if quality >= 0.7 and contact_id in _player_contacts:
+			var detection: Dictionary = _player_contacts[contact_id]
+			if detection.get("bearing_only", false):
+				# Still bearing-only in detection dict but TMA has a solution
+				# Place a dim estimated position marker
+				if contact_id in _unit_visuals:
+					var visual: Node2D = _unit_visuals[contact_id]
+					visual.visible = true
+					visual.position = estimated_pos * NM_TO_PX
+					visual.modulate.a = clampf(quality, 0.3, 0.8)
+	elif quality < 0.3:
+		_remove_uncertainty_zone(contact_id)
+
+## TMA contact lost -- clean up bearing line and uncertainty zone
+func _on_tma_contact_lost(contact_id: String) -> void:
+	_remove_bearing_line(contact_id)
+	_remove_uncertainty_zone(contact_id)
+
+## XBT dropped -- show thermal profile result to player
+func _on_xbt_dropped(unit_id: String, _position: Vector2, thermal_layer_depth_m: float) -> void:
+	AudioManager.play_splash()
+	if hud and hud.has_method("show_message"):
+		hud.show_message("XBT: THERMAL LAYER AT %dm" % int(thermal_layer_depth_m), 5.0)
+	if hud and hud.has_method("set_thermal_layer_known"):
+		hud.set_thermal_layer_known(thermal_layer_depth_m)
+
+## Enemy submarine went deep below thermal layer
+func _on_submarine_went_deep(unit_id: String, _ordered_depth_m: float) -> void:
+	# Only show if player had contact on this sub
+	if unit_id in _player_contacts:
+		if hud and hud.has_method("show_message"):
+			var det: Dictionary = _player_contacts[unit_id]
+			var designator: String = det.get("classification", {}).get("designator", "CONTACT")
+			hud.show_message("%s: TARGET GOING DEEP" % designator, 3.0)
+
+# ---------------------------------------------------------------------------
+# Signal handlers -- sonobuoys (Phase 7)
+# ---------------------------------------------------------------------------
+
+func _on_sonobuoy_deployed(buoy_id: String, position: Vector2, _faction: String) -> void:
+	AudioManager.play_sonobuoy_drop()
+	# Create a visual marker for the sonobuoy on the map
+	var visual := _SonobuoyVisual.new()
+	visual.name = "Sonobuoy_" + buoy_id
+	visual.buoy_id = buoy_id
+	visual.position = position * NM_TO_PX
+	units_layer.add_child(visual)
+	_sonobuoy_visuals[buoy_id] = visual
+
+func _on_sonobuoy_contact(buoy_id: String, target_id: String, bearing_deg: float, _snr: float) -> void:
+	# Draw a bearing line from the sonobuoy position toward the contact
+	if buoy_id not in _sonobuoy_visuals:
+		return
+	if buoy_id not in SimulationWorld.sonobuoys:
+		return
+
+	var buoy: Dictionary = SimulationWorld.sonobuoys[buoy_id]
+	var buoy_pos: Vector2 = buoy["position"]
+	var bearing_rad: float = deg_to_rad(bearing_deg)
+	var bearing_dir: Vector2 = Vector2(sin(bearing_rad), cos(bearing_rad))
+
+	var line_key: String = "%s:%s" % [buoy_id, target_id]
+	var line: Line2D
+	if line_key in _sonobuoy_bearing_lines:
+		line = _sonobuoy_bearing_lines[line_key]
+	else:
+		line = Line2D.new()
+		line.name = "BuoyBrg_" + line_key
+		line.width = 1.0
+		line.default_color = Color(0.2, 1.0, 0.4, 0.4)  # Green, semi-transparent
+		units_layer.add_child(line)
+		_sonobuoy_bearing_lines[line_key] = line
+
+	var start_px: Vector2 = buoy_pos * NM_TO_PX
+	var end_px: Vector2 = (buoy_pos + bearing_dir * 50.0) * NM_TO_PX
+	line.clear_points()
+	line.add_point(start_px)
+	line.add_point(end_px)
+	line.visible = true
+
+	# Update sonobuoy visual to show contact state (yellow)
+	var visual: Node2D = _sonobuoy_visuals.get(buoy_id)
+	if visual and visual is _SonobuoyVisual:
+		visual.has_contact = true
+		visual.queue_redraw()
+
+func _on_sonobuoy_dicass_contact(buoy_id: String, _target_id: String, bearing_deg: float, range_nm: float, _snr: float) -> void:
+	# DICASS contact: show range ring on buoy and bearing+range line
+	if buoy_id in _sonobuoy_visuals and _sonobuoy_visuals[buoy_id] is _SonobuoyVisual:
+		var visual: _SonobuoyVisual = _sonobuoy_visuals[buoy_id]
+		visual.has_contact = true
+		visual.dicass_range_nm = range_nm
+		visual.queue_redraw()
+
+	if hud and hud.has_method("show_message"):
+		hud.show_message("DICASS %s: CONTACT BRG %03d RNG %.1fNM" % [buoy_id, int(bearing_deg), range_nm], 3.0)
+
+func _on_sonobuoy_dicass_alert(sub_id: String, buoy_id: String, bearing_to_buoy: float) -> void:
+	# A submarine was alerted by a DICASS ping
+	# If the player deployed the buoy, warn that the target may evade
+	if buoy_id in SimulationWorld.sonobuoys:
+		var buoy: Dictionary = SimulationWorld.sonobuoys[buoy_id]
+		if buoy["faction"] == "player":
+			if hud and hud.has_method("show_message"):
+				hud.show_message("DICASS PING MAY HAVE ALERTED TARGET", 2.0)
+
+func _on_sonobuoy_expired(buoy_id: String) -> void:
+	# Remove the visual marker for the expired sonobuoy
+	if buoy_id in _sonobuoy_visuals:
+		_sonobuoy_visuals[buoy_id].queue_free()
+		_sonobuoy_visuals.erase(buoy_id)
+	# Remove any bearing lines from this buoy
+	var keys_to_remove: Array = []
+	for line_key in _sonobuoy_bearing_lines:
+		if line_key.begins_with(buoy_id + ":"):
+			keys_to_remove.append(line_key)
+	for key in keys_to_remove:
+		_sonobuoy_bearing_lines[key].queue_free()
+		_sonobuoy_bearing_lines.erase(key)
+
+# ---------------------------------------------------------------------------
+# Signal handlers -- Phase 5 (EMCON, Counter-Detection, ESM)
+# ---------------------------------------------------------------------------
+
+func _on_emcon_state_changed(unit_id: String, _old_state: int, new_state: int) -> void:
+	if unit_id in SimulationWorld.units and SimulationWorld.units[unit_id]["faction"] == "player":
+		var state_names := {0: "ALPHA", 1: "BRAVO", 2: "CHARLIE", 3: "DELTA"}
+		var name: String = state_names.get(new_state, "???")
+		if hud and hud.has_method("show_message"):
+			hud.show_message("EMCON %s" % name, 2.0)
+		AudioManager.play_emcon_change()
+
+func _on_counter_detection_event(detector_id: String, emitter_id: String, bearing: float) -> void:
+	if emitter_id in SimulationWorld.units and SimulationWorld.units[emitter_id]["faction"] == "player":
+		if hud and hud.has_method("show_alert"):
+			hud.show_alert("COUNTER-DETECTION: ENEMY HOLDS BEARING ON US", 3.0)
+	if detector_id in SimulationWorld.units and SimulationWorld.units[detector_id]["faction"] == "player":
+		if hud and hud.has_method("show_message"):
+			hud.show_message("ACTIVE SONAR INTERCEPT BRG %03d" % int(bearing), 2.0)
+
+func _on_esm_contact_detected(detector_id: String, _emitter_id: String, bearing: float, radar_type: String) -> void:
+	if detector_id in SimulationWorld.units and SimulationWorld.units[detector_id]["faction"] == "player":
+		if hud and hud.has_method("show_message"):
+			hud.show_message("ESM: %s RADAR BRG %03d" % [radar_type.to_upper(), int(bearing)], 2.0)
+
+# ---------------------------------------------------------------------------
+# Signal handlers -- Phase 8 (Weapons lifecycle)
+# ---------------------------------------------------------------------------
+
+func _on_torpedo_launched(weapon_id: String, shooter_id: String) -> void:
+	var is_player: bool = SimulationWorld.units.get(shooter_id, {}).get("faction", "") == "player"
+	AudioManager.play_torpedo_run("own" if is_player else "incoming")
+
+func _on_weapon_impact(weapon_id: String, target_id: String, hit: bool) -> void:
+	if hit:
+		AudioManager.play_torpedo_impact()
+		AudioManager.stop_torpedo_run()
+
+# ---------------------------------------------------------------------------
+# Signal handlers -- Phase 10 (ROE, classification, crisis temp)
+# ---------------------------------------------------------------------------
+
+func _on_roe_changed(new_state: int, _old_state: int) -> void:
+	var roe_names := {0: "WEAPONS TIGHT", 1: "WEAPONS HOLD", 2: "WEAPONS FREE"}
+	var name: String = roe_names.get(new_state, "???")
+	if hud and hud.has_method("show_alert"):
+		hud.show_alert("ROE: %s" % name, 4.0)
+
+func _on_roe_blocked(shooter_id: String, target_id: String, reason: String) -> void:
+	if shooter_id in SimulationWorld.units and SimulationWorld.units[shooter_id]["faction"] == "player":
+		if hud and hud.has_method("show_alert"):
+			hud.show_alert(reason, 3.0)
+
+func _on_contact_classification_changed(target_id: String, new_level: int, _old_level: int) -> void:
+	var level_names := {0: "UNKNOWN", 1: "SUSPECT", 2: "PROBABLE HOSTILE", 3: "CERTAIN HOSTILE"}
+	if target_id in _player_contacts:
+		var det: Dictionary = _player_contacts[target_id]
+		var designator: String = det.get("classification", {}).get("designator", target_id)
+		if hud and hud.has_method("show_message"):
+			hud.show_message("%s: %s" % [designator, level_names.get(new_level, "???")], 2.0)
+
+# ---------------------------------------------------------------------------
+# Signal handlers -- Phase 8 (kill confirmation, wire guidance, countermeasures)
+# ---------------------------------------------------------------------------
+
+func _on_kill_confirmed(target_id: String) -> void:
+	var kill_status: String = "DESTROYED"
+	if target_id in SimulationWorld.units:
+		var status: String = SimulationWorld.units[target_id].get("kill_status", "confirmed")
+		if status == "probable":
+			kill_status = "PROBABLE KILL"
+	var target_name: String = target_id
+	if target_id in _player_contacts:
+		target_name = _player_contacts[target_id].get("classification", {}).get("designator", target_id)
+	if hud and hud.has_method("show_alert"):
+		hud.show_alert("%s: %s" % [target_name, kill_status], 5.0)
+
+func _on_wire_cut(weapon_id: String) -> void:
+	# Notify player that wire guidance has been lost
+	if hud and hud.has_method("show_message"):
+		hud.show_message("WIRE CUT: %s" % weapon_id, 3.0)
+
+func _on_countermeasure_deployed(unit_id: String, cm_type: String) -> void:
+	# Show countermeasure status for player units
+	if unit_id in SimulationWorld.units and SimulationWorld.units[unit_id]["faction"] == "player":
+		var cm_name: String = "NIXIE" if cm_type == "nixie" else "NOISEMAKER"
+		if hud and hud.has_method("show_message"):
+			hud.show_message("%s DEPLOYED" % cm_name, 2.0)
+
+# ---------------------------------------------------------------------------
+# Inner class: uncertainty zone draw node
+# ---------------------------------------------------------------------------
+class _UncertaintyDraw extends Node2D:
+	var uncertainty_radius_px: float = 100.0
+	var quality: float = 0.0
+
+	func _draw() -> void:
+		# Color: starts amber/transparent, becomes green/opaque as quality improves
+		var t: float = clampf((quality - 0.3) / 0.7, 0.0, 1.0)
+		var fill_color := Color(
+			lerpf(1.0, 0.2, t),
+			lerpf(0.5, 0.8, t),
+			lerpf(0.1, 0.3, t),
+			lerpf(0.08, 0.12, t)
+		)
+		var border_color := Color(
+			lerpf(1.0, 0.3, t),
+			lerpf(0.6, 1.0, t),
+			lerpf(0.2, 0.4, t),
+			lerpf(0.3, 0.6, t)
+		)
+
+		if quality < 0.6:
+			# Low quality: draw wide arc (fan shape)
+			var arc_points: int = 24
+			var half_angle: float = lerpf(0.8, 0.3, clampf(quality / 0.6, 0.0, 1.0))  # radians
+			var polygon: PackedVector2Array = PackedVector2Array()
+			polygon.append(Vector2.ZERO)
+			for i in range(arc_points + 1):
+				var angle: float = -half_angle + (2.0 * half_angle * float(i) / float(arc_points))
+				polygon.append(Vector2(sin(angle), -cos(angle)) * uncertainty_radius_px)
+			polygon.append(Vector2.ZERO)
+			draw_colored_polygon(polygon, fill_color)
+			for i in range(1, polygon.size() - 1):
+				draw_line(polygon[i - 1], polygon[i], border_color, 1.0)
+		else:
+			# Higher quality: draw ellipse/circle
+			draw_circle(Vector2.ZERO, uncertainty_radius_px, fill_color)
+			# Draw border as arc segments
+			var segments: int = 32
+			for i in range(segments):
+				var a1: float = TAU * float(i) / float(segments)
+				var a2: float = TAU * float(i + 1) / float(segments)
+				draw_line(
+					Vector2(cos(a1), sin(a1)) * uncertainty_radius_px,
+					Vector2(cos(a2), sin(a2)) * uncertainty_radius_px,
+					border_color, 1.0
+				)
+
+		# Center cross at quality > 0.7 (estimated position marker)
+		if quality >= 0.7:
+			var cross_size: float = 6.0
+			var cross_color := Color(0.3, 1.0, 0.5, 0.8)
+			draw_line(Vector2(-cross_size, 0), Vector2(cross_size, 0), cross_color, 1.5)
+			draw_line(Vector2(0, -cross_size), Vector2(0, cross_size), cross_color, 1.5)
 
 # ---------------------------------------------------------------------------
 # HUD update
@@ -635,14 +1110,15 @@ func _unhandled_input(event: InputEvent) -> void:
 						hud.show_message("RADAR: %s" % ("ON" if new_radar else "OFF"), 1.5)
 			KEY_S:
 				if not _gameplay_blocked and _selected_unit_id != "":
-					var u: Dictionary = SimulationWorld.units.get(_selected_unit_id, {})
-					var new_sonar: bool = not u.get("emitting_sonar_active", false)
-					SimulationWorld.set_unit_sonar_active(_selected_unit_id, new_sonar)
-					# Item 9: sonar toggle feedback
+					# Phase 5: cycle active sonar modes: OFF -> QUIET -> FULL_POWER -> OFF
+					var current_mode: int = SimulationWorld.get_active_sonar_mode(_selected_unit_id)
+					var next_mode: int = (current_mode + 1) % 3
+					SimulationWorld.set_active_sonar_mode(_selected_unit_id, next_mode)
+					var mode_names := {0: "PASSIVE", 1: "QUIET PING", 2: "FULL POWER"}
 					if hud and hud.has_method("show_message"):
-						hud.show_message("SONAR: %s" % ("ACTIVE" if new_sonar else "PASSIVE"), 1.5)
-					# Audio: play sonar ping when switching to active mode
-					if new_sonar:
+						hud.show_message("SONAR: %s" % mode_names.get(next_mode, "???"), 1.5)
+					SimulationWorld.set_unit_sonar_active(_selected_unit_id, next_mode > 0)
+					if next_mode > 0:
 						AudioManager.play_sonar_ping()
 			KEY_L:
 				# Launch helicopter from selected ship
@@ -650,14 +1126,19 @@ func _unhandled_input(event: InputEvent) -> void:
 					var u: Dictionary = SimulationWorld.units[_selected_unit_id]
 					var platform: Dictionary = u.get("platform", {})
 					if platform.get("helicopter_type", "") != "":
-						var helo_id: String = SimulationWorld.launch_aircraft(_selected_unit_id)
-						if helo_id != "":
+						# Sea state 6+ blocks helicopter operations
+						if SimulationWorld.weather_sea_state >= 6:
 							if hud and hud.has_method("show_message"):
-								hud.show_message("HELICOPTER LAUNCHED", 2.0)
-							AudioManager.play_missile_away()  # Reuse the rising tone for launch
+								hud.show_message("FLIGHT OPS SUSPENDED — SEA STATE %d" % SimulationWorld.weather_sea_state, 3.0)
 						else:
-							if hud and hud.has_method("show_message"):
-								hud.show_message("NO HELICOPTER AVAILABLE", 2.0)
+							var helo_id: String = SimulationWorld.launch_aircraft(_selected_unit_id)
+							if helo_id != "":
+								if hud and hud.has_method("show_message"):
+									hud.show_message("HELICOPTER LAUNCHED", 2.0)
+								AudioManager.play_missile_away()  # Reuse the rising tone for launch
+							else:
+								if hud and hud.has_method("show_message"):
+									hud.show_message("NO HELICOPTER AVAILABLE", 2.0)
 					else:
 						if hud and hud.has_method("show_message"):
 							hud.show_message("NO HELICOPTER ON THIS SHIP", 2.0)
@@ -668,28 +1149,75 @@ func _unhandled_input(event: InputEvent) -> void:
 					if hud and hud.has_method("show_message"):
 						hud.show_message("CRT MODE: %s" % ("ON" if CRTEffect.enabled else "OFF"), 2.0)
 			KEY_M:
-				# Toggle minimap visibility
+				# Toggle tactical plot visibility
 				if not event.echo:
 					Minimap.enabled = not Minimap.enabled
 					if hud and hud.has_method("show_message"):
-						hud.show_message("MINIMAP: %s" % ("ON" if Minimap.enabled else "OFF"), 2.0)
+						hud.show_message("TACTICAL PLOT: %s" % ("ON" if Minimap.enabled else "OFF"), 2.0)
+			KEY_E:
+				# Phase 5: cycle EMCON state: ALPHA -> BRAVO -> CHARLIE -> DELTA -> ALPHA
+				if not _gameplay_blocked and _selected_unit_id != "":
+					var current: int = SimulationWorld.get_unit_emcon(_selected_unit_id)
+					var next_state: int = (current + 1) % 4
+					SimulationWorld.set_unit_emcon(_selected_unit_id, next_state)
 			KEY_B:
-				# Drop sonobuoy from selected aircraft
+				# Drop DIFAR (passive) sonobuoy from selected aircraft
 				if not _gameplay_blocked and _selected_unit_id != "" and _selected_unit_id in SimulationWorld.units:
 					var u: Dictionary = SimulationWorld.units[_selected_unit_id]
 					if u.get("is_airborne", false):
-						var buoy_id: String = SimulationWorld.deploy_sonobuoy(_selected_unit_id)
+						var buoy_id: String = SimulationWorld.deploy_sonobuoy(_selected_unit_id, 0)
 						if buoy_id != "":
-							var remaining: int = u.get("sonobuoys_remaining", 0)
+							var difar_rem: int = u.get("sonobuoys_difar", 0)
+							var dicass_rem: int = u.get("sonobuoys_dicass", 0)
 							if hud and hud.has_method("show_message"):
-								hud.show_message("SONOBUOY DEPLOYED (%d remaining)" % remaining, 2.0)
+								hud.show_message("DIFAR DEPLOYED (P:%d A:%d)" % [difar_rem, dicass_rem], 2.0)
 							AudioManager.play_weapon_launch()
 						else:
 							if hud and hud.has_method("show_message"):
-								hud.show_message("NO SONOBUOYS AVAILABLE", 2.0)
+								hud.show_message("NO DIFAR SONOBUOYS AVAILABLE", 2.0)
 					else:
 						if hud and hud.has_method("show_message"):
 							hud.show_message("MUST BE AIRBORNE TO DROP SONOBUOYS", 2.0)
+			KEY_N:
+				# Drop DICASS (active) sonobuoy from selected aircraft
+				if not _gameplay_blocked and _selected_unit_id != "" and _selected_unit_id in SimulationWorld.units:
+					var u: Dictionary = SimulationWorld.units[_selected_unit_id]
+					if u.get("is_airborne", false):
+						var buoy_id: String = SimulationWorld.deploy_sonobuoy(_selected_unit_id, 1)
+						if buoy_id != "":
+							var difar_rem: int = u.get("sonobuoys_difar", 0)
+							var dicass_rem: int = u.get("sonobuoys_dicass", 0)
+							if hud and hud.has_method("show_message"):
+								hud.show_message("DICASS DEPLOYED (P:%d A:%d)" % [difar_rem, dicass_rem], 2.0)
+							AudioManager.play_weapon_launch()
+						else:
+							if hud and hud.has_method("show_message"):
+								hud.show_message("NO DICASS SONOBUOYS AVAILABLE", 2.0)
+					else:
+						if hud and hud.has_method("show_message"):
+							hud.show_message("MUST BE AIRBORNE TO DROP SONOBUOYS", 2.0)
+			KEY_T:
+				# Drop XBT from selected surface ship
+				if not _gameplay_blocked and _selected_unit_id != "" and _selected_unit_id in SimulationWorld.units:
+					var u: Dictionary = SimulationWorld.units[_selected_unit_id]
+					if u.get("is_airborne", false):
+						if hud and hud.has_method("show_message"):
+							hud.show_message("AIRCRAFT CANNOT DROP XBT", 2.0)
+					elif u["depth_m"] < -5.0:
+						if hud and hud.has_method("show_message"):
+							hud.show_message("SUBMARINES CANNOT DROP XBT", 2.0)
+					else:
+						var xbt_remaining: int = u.get("xbt_remaining", 0)
+						if xbt_remaining <= 0:
+							if hud and hud.has_method("show_message"):
+								hud.show_message("NO XBTs REMAINING", 2.0)
+						else:
+							var success: bool = SimulationWorld.drop_xbt(_selected_unit_id)
+							if success:
+								AudioManager.play_weapon_launch()
+							else:
+								if hud and hud.has_method("show_message"):
+									hud.show_message("XBT DROP FAILED", 2.0)
 			KEY_TAB:
 				if not _gameplay_blocked:
 					_cycle_player_unit()  # M-6: Tab cycles through player units
@@ -716,6 +1244,22 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_F1:
 				if hud and hud.has_method("toggle_help"):
 					hud.toggle_help()
+			KEY_F5:
+				# Mid-mission save
+				if SimulationWorld.save_game():
+					if hud and hud.has_method("show_message"):
+						hud.show_message("GAME SAVED", 2.0)
+				else:
+					if hud and hud.has_method("show_message"):
+						hud.show_message("SAVE FAILED", 2.0)
+			KEY_F9:
+				# Mid-mission load
+				if SimulationWorld.load_game():
+					if hud and hud.has_method("show_message"):
+						hud.show_message("GAME LOADED", 2.0)
+				else:
+					if hud and hud.has_method("show_message"):
+						hud.show_message("NO SAVE FILE FOUND", 2.0)
 			KEY_EQUAL:
 				_zoom_camera(1.15)
 			KEY_MINUS:
@@ -1101,7 +1645,7 @@ class _NATOSymbol extends Node2D:
 			color = Color(0.6, 0.6, 0.6, _alpha)  # Neutral grey
 
 		match platform_type:
-			"DDG", "FFG", "CGN":
+			"DD", "DDG", "FFG", "CGN":
 				_draw_surface_symbol(color)
 			"SSN":
 				_draw_sub_symbol(color)
@@ -1299,6 +1843,93 @@ class _UnitVisualHelper extends Node:
 		var symbol = get_parent().find_child("Symbol")
 		if symbol and symbol.has_method("update_classification"):
 			symbol.update_classification(classification)
+
+## Phase 7: sonobuoy visual marker on the tactical map
+class _SonobuoyVisual extends Node2D:
+	var buoy_id: String = ""
+	var has_contact: bool = false
+	var dicass_range_nm: float = -1.0  # Positive when DICASS has a range fix
+	var _pulse_time: float = 0.0
+	var _last_has_contact: bool = false
+	var _last_battery_bucket: int = -1  # floor(battery_pct * 20), 0-20
+
+	func _process(delta: float) -> void:
+		_pulse_time += delta
+		# Check if buoy still exists
+		if buoy_id != "" and buoy_id not in SimulationWorld.sonobuoys:
+			queue_free()
+			return
+		# Only redraw when visual state actually changes
+		var _needs_redraw: bool = false
+		if has_contact != _last_has_contact:
+			_last_has_contact = has_contact
+			_needs_redraw = true
+		if buoy_id in SimulationWorld.sonobuoys:
+			var buoy: Dictionary = SimulationWorld.sonobuoys[buoy_id]
+			var age: float = SimulationWorld.sim_time - buoy["deploy_time"]
+			var battery_pct: float = clampf(1.0 - age / buoy["battery_life"], 0.0, 1.0)
+			var bucket: int = int(battery_pct * 20.0)
+			if bucket != _last_battery_bucket:
+				_last_battery_bucket = bucket
+				_needs_redraw = true
+		if _needs_redraw:
+			queue_redraw()
+
+	func _draw() -> void:
+		if buoy_id == "" or buoy_id not in SimulationWorld.sonobuoys:
+			return
+		var buoy: Dictionary = SimulationWorld.sonobuoys[buoy_id]
+		var age: float = SimulationWorld.sim_time - buoy["deploy_time"]
+		var battery_pct: float = clampf(1.0 - age / buoy["battery_life"], 0.0, 1.0)
+		var buoy_type: int = buoy.get("buoy_type", 0)
+
+		# Color: green = active/listening, yellow = contact, dims as battery depletes
+		var base_color: Color
+		if has_contact:
+			base_color = Color(1.0, 1.0, 0.2)  # Yellow: contact
+		elif buoy_type == 1:  # DICASS
+			base_color = Color(0.3, 0.6, 1.0)  # Blue for active buoys
+		else:
+			base_color = Color(0.2, 1.0, 0.4)  # Green for passive buoys
+
+		var alpha: float = clampf(battery_pct * 0.8 + 0.2, 0.2, 1.0)
+		var color := Color(base_color.r, base_color.g, base_color.b, alpha)
+
+		# Draw sonobuoy icon: small circle with center dot
+		draw_circle(Vector2.ZERO, 4.0, Color(color, alpha * 0.3))
+		draw_arc(Vector2.ZERO, 4.0, 0, TAU, 16, color, 1.0)
+		draw_circle(Vector2.ZERO, 1.5, color)
+
+		# DICASS: draw active ping ring (pulsing)
+		if buoy_type == 1:
+			var ping_alpha: float = alpha * 0.15 * (0.5 + 0.5 * sin(_pulse_time * 3.0))
+			var ring_radius: float = 8.0 * 10.0  # DICASS_BASE_DETECTION_RADIUS * NM_TO_PX
+			draw_arc(Vector2.ZERO, ring_radius, 0, TAU, 32, Color(0.3, 0.6, 1.0, ping_alpha), 1.0)
+
+		# Detection radius ring (faint)
+		var det_radius: float = 5.0 * 10.0 if buoy_type == 0 else 8.0 * 10.0  # nm * NM_TO_PX
+		draw_arc(Vector2.ZERO, det_radius, 0, TAU, 24, Color(color, alpha * 0.1), 0.5)
+
+		# Battery indicator: small arc segment below the buoy
+		if battery_pct < 0.9:
+			var arc_length: float = TAU * battery_pct
+			var arc_color: Color
+			if battery_pct > 0.5:
+				arc_color = Color(0.2, 1.0, 0.4, alpha * 0.6)
+			elif battery_pct > 0.2:
+				arc_color = Color(1.0, 1.0, 0.2, alpha * 0.6)
+			else:
+				arc_color = Color(1.0, 0.3, 0.3, alpha * 0.8)
+			draw_arc(Vector2(0, 8), 3.0, -PI / 2.0, -PI / 2.0 + arc_length, 12, arc_color, 1.5)
+
+		# Buoy type label
+		var type_str: String = "P" if buoy_type == 0 else "A"
+		# Draw type indicator as positioned text would require a Label child,
+		# so draw a small distinguishing mark instead
+		if buoy_type == 1:
+			# Active: small cross inside the circle
+			draw_line(Vector2(-2, 0), Vector2(2, 0), color, 1.0)
+			draw_line(Vector2(0, -2), Vector2(0, 2), color, 1.0)
 
 ## Fix 11: pulsing selection bracket drawn around the selected unit
 class _SelectionIndicator extends Node2D:

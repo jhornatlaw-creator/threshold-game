@@ -1,0 +1,16 @@
+{
+  "role": "COMMS",
+  "rank": "Petty Officer First Class",
+  "name": "Ruiz",
+  "title": "Radio Operator",
+  "voice": "procedural",
+  "color": "#CCCC66",
+  "description": "Technical, procedural. Reads traffic verbatim. Timestamps. Bearings. The human comes through in pauses, not words. Voice tightens when something bad is happening.",
+  "speech_rules": [
+    "Reads traffic verbatim -- does not paraphrase",
+    "Includes bearings, timestamps, designators",
+    "Uses [pause] for emotional weight -- never adds editorial",
+    "Voice tightens under stress: shorter sentences, no filler",
+    "Signs off with 'COMMS out.' on final transmissions"
+  ]
+}

@@ -9,7 +9,7 @@ var _weapons: Dictionary = {}
 var _sensors: Dictionary = {}
 var _loaded: bool = false
 
-const REQUIRED_PLATFORM_FIELDS := ["id", "name", "type", "max_speed_kts", "displacement_tons"]
+const REQUIRED_PLATFORM_FIELDS := ["id", "name", "type", "max_speed_kts", "displacement_tons", "sensors", "weapons"]
 const REQUIRED_WEAPON_FIELDS := ["id", "name", "type", "max_range_nm", "speed_kts", "pk_base", "warhead_kg"]
 const REQUIRED_SENSOR_FIELDS := ["id", "name", "type"]
 

@@ -1,0 +1,38 @@
+{
+  "mission_id": 6,
+  "mission_name": "REYKJANES RIDGE",
+  "scenario_file": "campaign_06_reykjanes_ridge.json",
+  "comms": [
+    {
+      "id": "m6_torpedo_incoming",
+      "trigger": "enemy_weapon_fired",
+      "trigger_params": {
+        "weapon_type": "torpedo"
+      },
+      "lines": [
+        {
+          "role": "COMMS",
+          "text": "Torpedo in the water. Bearing two-seven-zero. Classify Type 65."
+        },
+        {
+          "role": "COMMS",
+          "text": "Aimed at Elrod.",
+          "delay_ms": 1500
+        }
+      ]
+    },
+    {
+      "id": "m6_time_warning",
+      "trigger": "time_remaining",
+      "trigger_params": {
+        "remaining_seconds": 900
+      },
+      "lines": [
+        {
+          "role": "COMMAND",
+          "text": "Fifteen minutes to weapons release authority expiration. Status."
+        }
+      ]
+    }
+  ]
+}

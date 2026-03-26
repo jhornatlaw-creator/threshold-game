@@ -8,12 +8,15 @@
     "time_of_day": 10.0,
     "weather": "clear",
     "water_depth_m": 400,
-    "thermal_layer_depth_m": 90
+    "bottom_depth_m": 4200,
+    "thermal_layer_depth_m": 90,
+    "thermal_layer_strength": 0.85
   },
   "victory_condition": {
     "type": "protect_convoy",
     "time_limit_seconds": 9000
   },
+  "roe_state": "WEAPONS_FREE",
   "difficulty": {
     "detection_mult": 1.0,
     "player_pk_mult": 1.0,
@@ -22,7 +25,7 @@
   "units": [
     {
       "id": "PLAYER_DDG",
-      "platform_id": "ddg_arleigh_burke",
+      "platform_id": "dd_spruance",
       "name": "USS Hayler",
       "faction": "player",
       "x": -5.0,

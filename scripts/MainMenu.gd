@@ -26,6 +26,12 @@ var _difficulty_label: Label  # center label showing current tier name
 
 
 func _ready() -> void:
+	# Phase 11: Menu screen atmosphere -- ambient ocean + distant ping
+	AudioManager.reset()
+	AudioManager.start_ocean_ambience()
+	# Play a single sonar ping after a short delay for atmosphere
+	await get_tree().create_timer(1.5).timeout
+	AudioManager.play_sonar_ping()
 	_build_layout()
 
 

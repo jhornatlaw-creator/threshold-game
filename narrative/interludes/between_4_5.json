@@ -1,0 +1,8 @@
+{
+  "interlude_id": "between_4_5",
+  "after_mission": 4,
+  "before_mission": 5,
+  "type": "flash_traffic",
+  "classification": "IMMEDIATE",
+  "text": "FLASH TRAFFIC 180300Z NOV 1985  [IMMEDIATE]\n\nUSS Hayler (DD-997) reports torpedo impact starboard quarter during VERTREP operations.\nShip is listing 12 degrees to starboard. Flooding in engineering spaces.\n23 crew missing. SAR operations underway.\n\nROE review in progress at CINCLANTFLT."
+}

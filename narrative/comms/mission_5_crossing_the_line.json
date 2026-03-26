@@ -1,0 +1,32 @@
+{
+  "mission_id": 5,
+  "mission_name": "CROSSING THE LINE",
+  "scenario_file": "campaign_05_crossing_the_line.json",
+  "comms": [
+    {
+      "id": "m5_weapons_free",
+      "trigger": "mission_start",
+      "trigger_params": {
+        "delay_seconds": 5
+      },
+      "lines": [
+        {
+          "role": "COMMAND",
+          "text": "FLASH traffic. WEAPONS FREE on all submarine contacts. Acknowledge."
+        },
+        {
+          "role": "COMMAND",
+          "text": "End them.",
+          "delay_ms": 2000
+        }
+      ]
+    },
+    {
+      "id": "m5_first_weapon_silence",
+      "trigger": "first_player_weapon_fired",
+      "lines": [],
+      "silence": true,
+      "silence_note": "No radio traffic. The absence IS the beat."
+    }
+  ]
+}

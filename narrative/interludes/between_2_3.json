@@ -1,0 +1,8 @@
+{
+  "interlude_id": "between_2_3",
+  "after_mission": 2,
+  "before_mission": 3,
+  "type": "oceanographic_note",
+  "classification": "CONFIDENTIAL",
+  "text": "OCEANOGRAPHIC NOTE 121800Z NOV 1985\n\nThermal profile update: mixed layer depth 85 meters.\nConvergence zone detection reported by NAVFAC Keflavik at 33nm intervals.\nBiological noise levels elevated \u2014 humpback migration in Denmark Strait.\n\nRecommend XBT deployment prior to prosecution."
+}

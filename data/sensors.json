@@ -1,23 +1,6 @@
 {
   "sensors": [
     {
-      "id": "spy1d",
-      "name": "AN/SPY-1D",
-      "type": "radar",
-      "subtype": "phased_array",
-      "peak_power_kw": 4000,
-      "max_range_nm": 190,
-      "frequency_band": "S",
-      "scan_rate_rpm": 0,
-      "notes": "Electronically scanned, no mechanical rotation needed",
-      "confidence_tier": {
-        "peak_power_kw": 2,
-        "max_range_nm": 1,
-        "frequency_band": 1
-      },
-      "description": "Passive electronically scanned phased array radar. Heart of the Aegis combat system. Simultaneous multi-target tracking and fire control."
-    },
-    {
       "id": "sps49",
       "name": "AN/SPS-49",
       "type": "radar",
@@ -34,23 +17,23 @@
       "description": "Long-range 2D air search radar. Rotating antenna. Primary air surveillance on non-Aegis and Aegis ships alike."
     },
     {
-      "id": "sqs53c",
-      "name": "AN/SQS-53C",
+      "id": "sqs53",
+      "name": "AN/SQS-53A",
       "type": "sonar",
       "subtype": "hull_mounted",
-      "source_level_db": 235,
-      "sensitivity_db": 90,
-      "array_gain_db": 25,
+      "source_level_db": 232,
+      "sensitivity_db": 88,
+      "array_gain_db": 24,
       "detection_threshold_db": 4,
-      "max_range_nm_active": 20,
-      "max_range_nm_passive": 35,
+      "max_range_nm_active": 18,
+      "max_range_nm_passive": 30,
       "frequency_khz": 3.5,
       "confidence_tier": {
         "source_level_db": 2,
         "max_range_nm_active": 2,
         "max_range_nm_passive": 2
       },
-      "description": "Hull-mounted active/passive sonar. Large bow dome. Primary ASW sensor on Spruance and Burke-class destroyers."
+      "description": "Hull-mounted active/passive sonar. Large bow dome. Primary ASW sensor on Spruance-class destroyers."
     },
     {
       "id": "sqs56",
@@ -72,25 +55,6 @@
       "description": "Hull-mounted active/passive sonar for frigates. Smaller and lighter than SQS-53. Adequate for escort duties."
     },
     {
-      "id": "bqs15",
-      "name": "AN/BQS-15",
-      "type": "sonar",
-      "subtype": "submarine_bow",
-      "source_level_db": 230,
-      "sensitivity_db": 95,
-      "array_gain_db": 30,
-      "detection_threshold_db": 3,
-      "max_range_nm_active": 25,
-      "max_range_nm_passive": 50,
-      "frequency_khz": 3.0,
-      "confidence_tier": {
-        "source_level_db": 2,
-        "max_range_nm_active": 2,
-        "max_range_nm_passive": 2
-      },
-      "description": "Submarine bow-mounted sonar array. Large spherical array provides excellent passive detection. Part of BQQ-5 suite on Los Angeles-class."
-    },
-    {
       "id": "bqq5",
       "name": "AN/BQQ-5",
       "type": "sonar",
@@ -103,6 +67,20 @@
       "max_range_nm_passive": 80,
       "frequency_khz": 3.0,
       "description": "Integrated submarine sonar suite. BQS-13 spherical bow array with BQR-15 towed array."
+    },
+    {
+      "id": "bqr15",
+      "name": "AN/BQR-15 Towed Array",
+      "type": "sonar",
+      "subtype": "towed_array",
+      "source_level_db": 0,
+      "sensitivity_db": 100,
+      "array_gain_db": 32,
+      "detection_threshold_db": 3,
+      "max_range_nm_active": 0,
+      "max_range_nm_passive": 90,
+      "frequency_khz": 1.5,
+      "description": "Submarine towed array. Part of BQQ-5 suite on Los Angeles-class. Passive only. Long-range low-frequency detection. Bypasses thermal layer when deployed below it. Critical for tracking quiet submarines."
     },
     {
       "id": "mgk540",

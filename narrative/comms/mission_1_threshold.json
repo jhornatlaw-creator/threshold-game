@@ -1,0 +1,17 @@
+{
+  "mission_id": 1,
+  "mission_name": "THRESHOLD",
+  "scenario_file": "north_atlantic_asw.json",
+  "comms": [
+    {
+      "id": "m1_first_passive_detect",
+      "trigger": "first_passive_detection",
+      "lines": [
+        {
+          "role": "INTEL",
+          "text": "SOSUS correlates. Acoustic match confidence sixty-two percent against Akula-class. Designate Sierra-One."
+        }
+      ]
+    }
+  ]
+}

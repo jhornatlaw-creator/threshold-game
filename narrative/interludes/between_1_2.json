@@ -1,0 +1,8 @@
+{
+  "interlude_id": "between_1_2",
+  "after_mission": 1,
+  "before_mission": 2,
+  "type": "sigint_summary",
+  "classification": "SECRET",
+  "text": "SIGINT SUMMARY 101200Z NOV 1985\n\nSoviet Northern Fleet activity increased 40% in past 72 hours.\nThree additional attack submarines have transited the Barents Sea.\nSOSUS barriers report continuous contacts along GIUK line.\n\nAssessment: this is not an exercise."
+}

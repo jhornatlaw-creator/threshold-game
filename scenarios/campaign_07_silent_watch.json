@@ -8,13 +8,16 @@
     "time_of_day": 20.0,
     "weather": "clear",
     "water_depth_m": 350,
-    "thermal_layer_depth_m": 90
+    "bottom_depth_m": 3800,
+    "thermal_layer_depth_m": 90,
+    "thermal_layer_strength": 0.85
   },
   "victory_condition": {
     "type": "maintain_contact",
     "contact_duration_seconds": 1800,
     "time_limit_seconds": 7200
   },
+  "roe_state": "WEAPONS_TIGHT",
   "difficulty": {
     "detection_mult": 1.2,
     "player_pk_mult": 1.0,
@@ -23,8 +26,8 @@
   "units": [
     {
       "id": "PLAYER_DDG",
-      "platform_id": "ddg_arleigh_burke",
-      "name": "USS Kidd",
+      "platform_id": "dd_spruance",
+      "name": "USS O'Brien",
       "faction": "player",
       "x": 0.0,
       "y": 0.0,

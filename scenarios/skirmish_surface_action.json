@@ -8,12 +8,15 @@
     "time_of_day": 14.0,
     "weather": "clear",
     "water_depth_m": 350,
-    "thermal_layer_depth_m": 85
+    "bottom_depth_m": 3600,
+    "thermal_layer_depth_m": 85,
+    "thermal_layer_strength": 0.8
   },
   "victory_condition": {
     "type": "destroy_all_enemies",
     "time_limit_seconds": 7200
   },
+  "roe_state": "WEAPONS_FREE",
   "difficulty": {
     "detection_mult": 1.2,
     "player_pk_mult": 0.9,
@@ -22,8 +25,8 @@
   "units": [
     {
       "id": "PLAYER_DDG_1",
-      "platform_id": "ddg_arleigh_burke",
-      "name": "USS Arleigh Burke",
+      "platform_id": "dd_spruance",
+      "name": "USS Spruance",
       "faction": "player",
       "x": 0.0,
       "y": 0.0,
@@ -33,8 +36,8 @@
     },
     {
       "id": "PLAYER_DDG_2",
-      "platform_id": "ddg_arleigh_burke",
-      "name": "USS Barry",
+      "platform_id": "dd_spruance",
+      "name": "USS Kinkaid",
       "faction": "player",
       "x": 8.0,
       "y": 5.0,

@@ -1,19 +1,22 @@
 {
   "name": "Northern Watch",
   "description": "A Soviet surface group is operating near your patrol area. Rules of engagement are restrictive. Do not fire unless fired upon.",
-  "briefing": "CLASSIFICATION: SECRET\n\nTO: Commander, Patrol Group DELTA\nFROM: COMNAVAIRLANT\nDTG: 181200Z NOV 1985\n\nThe Soviet exercise has not ended. A second surface group is moving south through the Norwegian Sea.\n\nDiplomatic channels are active. Rules of engagement have been tightened.\n\nDo not fire unless fired upon. Do not illuminate with fire control radar.\n\nThe lead Udaloy painted USS Kidd with fire control radar at 0847Z. And again at 0903Z.\n\nIt was not an accident.\n\nMaintain contact. Report all movements. Weapons tight until further notice.\n\nUpdate 1100Z: ROE change. Weapons free on confirmed hostile contacts. They crossed the line first.",
+  "briefing": "CLASSIFICATION: SECRET\n\nTO: Commander, Patrol Group DELTA\nFROM: COMNAVAIRLANT\nDTG: 181200Z NOV 1985\n\nThe Soviet exercise has not ended. A second surface group is moving south through the Norwegian Sea.\n\nDiplomatic channels are active. Rules of engagement have been tightened.\n\nDo not fire unless fired upon. Do not illuminate with fire control radar.\n\nThe lead Udaloy painted USS O'Brien with fire control radar at 0847Z. And again at 0903Z.\n\nIt was not an accident.\n\nMaintain contact. Report all movements. Weapons tight until further notice.\n\nUpdate 1100Z: ROE change. Weapons free on confirmed hostile contacts. They crossed the line first.",
   "campaign_mission": 4,
   "environment": {
     "sea_state": 5,
     "time_of_day": 12.0,
     "weather": "rain",
     "water_depth_m": 350,
-    "thermal_layer_depth_m": 60
+    "bottom_depth_m": 3600,
+    "thermal_layer_depth_m": 60,
+    "thermal_layer_strength": 0.75
   },
   "victory_condition": {
     "type": "destroy_all_enemies",
     "time_limit_seconds": 7200
   },
+  "roe_state": "WEAPONS_TIGHT",
   "difficulty": {
     "detection_mult": 0.9,
     "player_pk_mult": 1.0,
@@ -22,8 +25,8 @@
   "units": [
     {
       "id": "PLAYER_DDG",
-      "platform_id": "ddg_arleigh_burke",
-      "name": "USS Kidd",
+      "platform_id": "dd_spruance",
+      "name": "USS O'Brien",
       "faction": "player",
       "x": 0.0,
       "y": 0.0,

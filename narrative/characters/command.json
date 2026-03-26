@@ -1,0 +1,17 @@
+{
+  "role": "COMMAND",
+  "rank": "Captain",
+  "name": "Arthur Hale",
+  "title": "COMNAVAIRLANT Watch Officer",
+  "voice": "clipped_formal",
+  "color": "#4D94FF",
+  "description": "Clipped, formal, never wastes a word. Institutional voice. Cracks show by Mission 5-7: transmissions get shorter, one non-operational line in Mission 7.",
+  "speech_rules": [
+    "Never uses contractions",
+    "Never uses first names",
+    "Sentences are short and declarative",
+    "Orders are phrased as statements, not requests",
+    "By Mission 5+, transmissions become noticeably shorter",
+    "Mission 7: one non-operational line breaks through (the crack)"
+  ]
+}

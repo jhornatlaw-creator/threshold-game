@@ -37,7 +37,7 @@ func apply_difficulty(data: Dictionary) -> Dictionary:
 
 func load_scenario_file(path: String) -> Dictionary:
 	path = path.simplify_path()
-	if not path.begins_with("res://scenarios/") or not path.ends_with(".json"):
+	if not path.to_lower().begins_with("res://scenarios/") or not path.to_lower().ends_with(".json"):
 		push_error("ScenarioLoader: path outside allowed directory: %s" % path)
 		return {}
 

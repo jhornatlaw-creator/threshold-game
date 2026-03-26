@@ -1,0 +1,54 @@
+{
+  "mission_id": 7,
+  "mission_name": "SILENT WATCH",
+  "scenario_file": "campaign_07_silent_watch.json",
+  "comms": [
+    {
+      "id": "m7_ceasefire_order",
+      "trigger": "mission_start",
+      "trigger_params": {
+        "delay_seconds": 3
+      },
+      "lines": [
+        {
+          "role": "COMMAND",
+          "text": "Ceasefire is in effect. Track all contacts. Do not \u2014 repeat \u2014 do not engage."
+        },
+        {
+          "role": "COMMAND",
+          "text": "Somebody in a room far from here worked very hard to stop this war. Do not be the one who starts it again.",
+          "delay_ms": 2000
+        }
+      ]
+    },
+    {
+      "id": "m7_active_sonar_rebuke",
+      "trigger": "player_active_sonar",
+      "lines": [
+        {
+          "role": "COMMAND",
+          "text": "Patrol Group DELTA, this is COMNAVAIRLANT. We are reading active sonar emissions from your position. Explain. Immediately."
+        }
+      ]
+    },
+    {
+      "id": "m7_contacts_withdrawing",
+      "trigger": "all_enemies_retreating",
+      "fallback_trigger": "time_remaining",
+      "fallback_params": {
+        "remaining_seconds": 120
+      },
+      "lines": [
+        {
+          "role": "COMMS",
+          "text": "All contacts withdrawing northeast. Bearing rate confirms. They are going home."
+        },
+        {
+          "role": "COMMS",
+          "text": "COMMS out.",
+          "delay_ms": 3000
+        }
+      ]
+    }
+  ]
+}

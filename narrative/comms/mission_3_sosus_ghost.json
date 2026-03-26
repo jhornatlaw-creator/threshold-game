@@ -1,0 +1,30 @@
+{
+  "mission_id": 3,
+  "mission_name": "SOSUS GHOST",
+  "scenario_file": "campaign_03_sosus_ghost.json",
+  "comms": [
+    {
+      "id": "m3_unknown_contact",
+      "trigger": "first_passive_detection",
+      "lines": [
+        {
+          "role": "INTEL",
+          "text": "Acoustic match confidence: fourteen percent against all known classes. This is something new."
+        }
+      ]
+    },
+    {
+      "id": "m3_classification_unknown",
+      "trigger": "contact_classified",
+      "trigger_params": {
+        "classification_result": "unknown"
+      },
+      "lines": [
+        {
+          "role": "COMMAND",
+          "text": "Classification UNKNOWN stands. Continue prosecution. Report everything."
+        }
+      ]
+    }
+  ]
+}

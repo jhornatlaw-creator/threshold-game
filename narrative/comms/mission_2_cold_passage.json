@@ -1,0 +1,35 @@
+{
+  "mission_id": 2,
+  "mission_name": "COLD PASSAGE",
+  "scenario_file": "campaign_02_cold_passage.json",
+  "comms": [
+    {
+      "id": "m2_udaloy_accel",
+      "trigger": "enemy_speed_increase",
+      "trigger_params": {
+        "platform_type": "DDG",
+        "speed_threshold_kts": 20
+      },
+      "lines": [
+        {
+          "role": "COMMS",
+          "text": "Contact Sierra-Two is accelerating. Bearing rate increasing."
+        }
+      ]
+    },
+    {
+      "id": "m2_tracking_requirement",
+      "trigger": "time_elapsed",
+      "trigger_params": {
+        "elapsed_seconds": 1800
+      },
+      "condition": "maintain_contact_active",
+      "lines": [
+        {
+          "role": "INTEL",
+          "text": "Tracking data meets minimum collection requirement. Continue as ordered."
+        }
+      ]
+    }
+  ]
+}

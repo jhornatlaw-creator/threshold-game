@@ -1,15 +1,15 @@
 {
   "platforms": [
     {
-      "id": "ddg_arleigh_burke",
-      "name": "Arleigh Burke",
-      "class_name": "Arleigh Burke-class",
-      "type": "DDG",
+      "id": "dd_spruance",
+      "name": "Spruance",
+      "class_name": "Spruance-class",
+      "type": "DD",
       "faction_default": "US",
-      "displacement_tons": 8315,
-      "max_speed_kts": 31,
-      "crew": 323,
-      "commissioned_year": 1991,
+      "displacement_tons": 8040,
+      "max_speed_kts": 33,
+      "crew": 382,
+      "commissioned_year": 1975,
       "confidence_tier": {
         "displacement_tons": 1,
         "max_speed_kts": 1,
@@ -19,20 +19,21 @@
         "noise_db_cruise": 2,
         "target_strength_db": 2
       },
-      "rcs_m2": 1000,
-      "noise_db_cruise": 130,
-      "target_strength_db": 22,
+      "rcs_m2": 5000,
+      "noise_db_cruise": 135,
+      "target_strength_db": 23,
       "has_ciws": true,
       "has_chaff": true,
-      "has_decoy": false,
-      "has_ecm": true,
+      "has_decoy": true,
+      "has_ecm": false,
       "has_esm": true,
-      "antenna_height_ft": 85,
+      "antenna_height_ft": 75,
       "helicopter_type": "sh60b_seahawk",
-      "helicopter_count": 2,
-      "weapons": ["harpoon_agm84", "sm2_rim66", "mk46_torpedo", "asroc_rur5"],
-      "sensors": ["spy1d", "sps49", "sqs53c", "sqr19"],
-      "description": "Guided-missile destroyer. Backbone of the US surface fleet. Aegis combat system with SPY-1D phased array radar."
+      "helicopter_count": 1,
+      "weapons": ["harpoon_agm84", "mk46_torpedo", "asroc_rur5"],
+      "sensors": ["sps49", "sqs53", "sqr19"],
+      "xbt_count": 12,
+      "description": "Anti-submarine warfare destroyer. Primary US Navy ASW surface platform in the 1980s. SQS-53 bow sonar, ASROC, LAMPS III helicopter, towed array. Gas turbine propulsion."
     },
     {
       "id": "ffg_oliver_hazard_perry",
@@ -58,7 +59,7 @@
       "target_strength_db": 20,
       "has_ciws": false,
       "has_chaff": true,
-      "has_decoy": false,
+      "has_decoy": true,
       "has_ecm": false,
       "has_esm": true,
       "antenna_height_ft": 60,
@@ -66,6 +67,7 @@
       "helicopter_count": 2,
       "weapons": ["harpoon_agm84", "mk46_torpedo"],
       "sensors": ["sps49", "sqs56", "sqr19"],
+      "xbt_count": 10,
       "description": "Guided-missile frigate. Workhorse escort vessel. Single-arm Mk 13 launcher. Limited self-defense capability."
     },
     {
@@ -96,8 +98,9 @@
       "has_ecm": false,
       "has_esm": true,
       "antenna_height_ft": 30,
-      "weapons": ["mk48_adcap", "harpoon_agm84"],
-      "sensors": ["bqq5"],
+      "weapons": ["mk48_mod4", "harpoon_agm84"],
+      "sensors": ["bqq5", "bqr15"],
+      "xbt_count": 0,
       "description": "Nuclear attack submarine. Fast and quiet. Primary anti-submarine warfare platform. Can launch Harpoon from torpedo tubes."
     },
     {
@@ -130,8 +133,9 @@
       "antenna_height_ft": 100,
       "helicopter_type": "ka27_helix",
       "helicopter_count": 3,
-      "weapons": ["p700_granit", "rpk6_vodopad", "type65_torpedo"],
+      "weapons": ["p700_granit", "rpk6_vodopad", "set65_torpedo"],
       "sensors": ["mgk540", "top_pair"],
+      "xbt_count": 0,
       "description": "Nuclear-powered battlecruiser. Largest surface combatant built since WWII. Massive armament and sensor suite."
     },
     {
@@ -166,6 +170,7 @@
       "helicopter_count": 2,
       "weapons": ["rpk6_vodopad", "set65_torpedo"],
       "sensors": ["mgk540", "top_plate"],
+      "xbt_count": 0,
       "description": "Anti-submarine destroyer. Primary Soviet ASW escort. Two quad torpedo launchers, twin helicopter hangar."
     },
     {
@@ -220,7 +225,9 @@
       "has_esm": true,
       "antenna_height_ft": 0,
       "max_endurance_hours": 3.5,
-      "sonobuoy_count": 12,
+      "sonobuoy_count": 15,
+      "sonobuoy_difar": 10,
+      "sonobuoy_dicass": 5,
       "weapons": ["mk46_torpedo"],
       "sensors": ["ans_dipping"],
       "description": "Ship-based ASW helicopter. LAMPS III system. Dipping sonar, sonobuoys, and Mk 46 torpedoes. Primary ASW prosecution platform for surface ships."
@@ -245,7 +252,9 @@
       "has_esm": true,
       "antenna_height_ft": 0,
       "max_endurance_hours": 12.0,
-      "sonobuoy_count": 48,
+      "sonobuoy_count": 84,
+      "sonobuoy_difar": 64,
+      "sonobuoy_dicass": 20,
       "weapons": ["mk46_torpedo"],
       "sensors": ["ans_searchradar"],
       "description": "Land-based maritime patrol aircraft. 12+ hour endurance. Carries sonobuoys, MAD, and torpedoes. Primary NATO ASW search platform."
@@ -271,6 +280,8 @@
       "antenna_height_ft": 0,
       "max_endurance_hours": 2.5,
       "sonobuoy_count": 8,
+      "sonobuoy_difar": 6,
+      "sonobuoy_dicass": 2,
       "weapons": ["set65_torpedo"],
       "sensors": ["ans_dipping_soviet"],
       "description": "Soviet shipborne ASW helicopter. Dipping sonar and torpedoes. Carried on Udaloy (x2) and Kirov."

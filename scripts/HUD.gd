@@ -42,11 +42,19 @@ var _tutorial_pause_gate: bool = false  # Whether current tutorial prompt requir
 var _help_expanded: bool = false
 var _pause_menu: PanelContainer = null  # Pause menu overlay
 var _debrief_panel: PanelContainer = null  # Mission debrief overlay
+var _debrief_continue_hint: Label = null  # Delayed continue hint
+var _debrief_continue_timer: float = 0.0  # 3-second delay before showing continue
+var _debrief_memorial_labels: Array = []  # Crew name labels for memorial scroll
+var _debrief_memorial_timer: float = 0.0  # Timer for memorial name reveal
+var _debrief_memorial_index: int = 0  # Next name to reveal
 var _campaign_mission: int = 0  # Current campaign mission number (1-based), 0 = not in campaign
 var _campaign_total: int = 0  # Total campaign missions
 var _campaign_name: String = ""  # Current mission name for campaign header
 var _tracking_target_seconds: float = 0.0  # Required contact time for maintain_contact
 var _weather_label: Label = null  # Weather/sea state top-bar display
+var _thermal_label: Label = null  # Thermal layer depth display
+var _thermal_layer_known: bool = false  # Has the player dropped an XBT?
+var _thermal_layer_depth: float = -1.0  # Known thermal layer depth (from XBT)
 
 func _exit_tree() -> void:
 	if SimulationWorld.sim_tick.is_connected(_on_sim_tick):
@@ -75,10 +83,25 @@ func _ready() -> void:
 	_weather_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	$TopBar.add_child(_weather_label)
 	_update_weather_display()
+	# Thermal layer label (below weather, right side)
+	_thermal_label = Label.new()
+	_thermal_label.name = "ThermalLabel"
+	_thermal_label.add_theme_font_size_override("font_size", 11)
+	_thermal_label.add_theme_color_override("font_color", Color(0.5, 0.4, 0.6))
+	_thermal_label.anchor_left = 1.0
+	_thermal_label.anchor_right = 1.0
+	_thermal_label.offset_left = -300
+	_thermal_label.offset_right = -10
+	_thermal_label.offset_top = 16
+	_thermal_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_thermal_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$TopBar.add_child(_thermal_label)
+	_update_thermal_display()
 
 func _on_sim_tick(_tick: int, _time: float) -> void:
 	_refresh_contacts()
 	_update_weather_display()
+	_update_thermal_display()
 
 func _update_weather_display() -> void:
 	if not _weather_label:
@@ -96,6 +119,24 @@ func _update_weather_display() -> void:
 
 func _on_weather_changed(_sea_state: int, _weather: String, _visibility: float) -> void:
 	_update_weather_display()
+
+func _update_thermal_display() -> void:
+	if not _thermal_label:
+		return
+	if _thermal_layer_known:
+		_thermal_label.text = "LAYER: %dm (XBT)" % int(_thermal_layer_depth)
+		_thermal_label.add_theme_color_override("font_color", Color(0.3, 0.7, 0.9))
+	else:
+		# Before XBT: show briefing estimate (offset from actual by 10-20m)
+		var est: float = SimulationWorld._estimated_thermal_depth_m
+		_thermal_label.text = "LAYER: ~%dm (EST)" % int(est)
+		_thermal_label.add_theme_color_override("font_color", Color(0.5, 0.4, 0.6))
+
+## Called when player drops an XBT and the actual thermal layer depth is revealed.
+func set_thermal_layer_known(depth_m: float) -> void:
+	_thermal_layer_known = true
+	_thermal_layer_depth = depth_m
+	_update_thermal_display()
 
 func _process(delta: float) -> void:
 	if pause_label:
@@ -128,6 +169,23 @@ func _process(delta: float) -> void:
 		if _briefing_countdown <= 0.0:
 			dismiss_briefing()
 			SimulationWorld.is_paused = false
+	# Debrief continue hint -- 3-second delay before showing
+	if _debrief_continue_timer > 0.0:
+		_debrief_continue_timer -= delta
+		if _debrief_continue_timer <= 0.0 and _debrief_continue_hint:
+			_debrief_continue_hint.visible = true
+	# Debrief memorial scroll -- reveal crew names one at a time
+	if _debrief_memorial_timer > 0.0 and _debrief_memorial_index < _debrief_memorial_labels.size():
+		_debrief_memorial_timer -= delta
+		if _debrief_memorial_timer <= 0.0:
+			if _debrief_memorial_index < _debrief_memorial_labels.size():
+				var lbl: Label = _debrief_memorial_labels[_debrief_memorial_index]
+				if is_instance_valid(lbl):
+					lbl.visible = true
+				_debrief_memorial_index += 1
+				# Stagger: show one name every 0.08 seconds (fast enough for 200+ crew)
+				if _debrief_memorial_index < _debrief_memorial_labels.size():
+					_debrief_memorial_timer = 0.08
 
 # ---------------------------------------------------------------------------
 # Public methods called by RenderBridge
@@ -163,27 +221,41 @@ func show_result(result: String) -> void:
 	var e_seconds: int = int(elapsed) % 60
 	var elapsed_str: String = "%02d:%02d:%02d" % [e_hours, e_minutes, e_seconds]
 
-	# --- Collect player force status ---
-	# Array of {name, ok} dicts for the forces section
-	var force_rows: Array = []
-	# Array of "Name (N crew)" strings for ships lost THIS mission
-	var lost_this_mission: Array = []
+	# --- Collect player force status (REAL crew counts from platform data) ---
+	var force_rows: Array = []  # {name, ok, crew}
+	var lost_this_mission: Array = []  # {name, crew, ship_id}
 	for uid in SimulationWorld.units:
 		var u: Dictionary = SimulationWorld.units[uid]
 		if u.get("faction", "") != "player":
 			continue
-		# Skip helicopters / aircraft
 		var platform_type: String = u.get("platform", {}).get("type", "")
 		if platform_type in ["SH60B", "MPA", "P3C", "HELO"]:
 			continue
 		var ship_name: String = u.get("name", uid)
+		var crew_count: int = u.get("platform", {}).get("crew", 0)
 		if u["is_alive"]:
-			force_rows.append({"name": ship_name, "ok": true})
+			force_rows.append({"name": ship_name, "ok": true, "crew": crew_count})
 		else:
-			var displacement: float = u.get("platform", {}).get("displacement_tons", 4000.0)
-			var crew_est: int = int(displacement / 20.0)
-			force_rows.append({"name": ship_name, "ok": false})
-			lost_this_mission.append("%s (%d crew)" % [ship_name, crew_est])
+			force_rows.append({"name": ship_name, "ok": false, "crew": crew_count})
+			lost_this_mission.append({"name": ship_name, "crew": crew_count, "ship_id": uid})
+
+	# --- Collect enemy kills for this mission ---
+	var enemy_kills_this_mission: Array = []
+	for uid in SimulationWorld.units:
+		var u: Dictionary = SimulationWorld.units[uid]
+		if u.get("faction", "") != "enemy":
+			continue
+		if not u["is_alive"]:
+			var e_name: String = u.get("name", uid)
+			var e_class: String = u.get("platform", {}).get("class_name", "")
+			var e_crew: int = u.get("platform", {}).get("crew", 0)
+			var e_hull: String = u.get("hull_number", "")
+			enemy_kills_this_mission.append({
+				"name": e_name, "class": e_class, "crew": e_crew, "hull_number": e_hull,
+			})
+			# Record in campaign manager
+			if CampaignManager.campaign_active:
+				CampaignManager.record_enemy_kill(e_name, e_class, e_crew, e_hull)
 
 	# --- Collect score ---
 	var grade: String = "?"
@@ -202,7 +274,6 @@ func show_result(result: String) -> void:
 		weapons_fired = score_data["weapons_fired"]
 		ScoreManager.stop_tracking()
 
-	# Efficiency %: kills / total_enemies, or weapons efficiency
 	var efficiency_pct: int = 100
 	if weapons_fired > 0 and total_enemies > 0:
 		var ideal: int = total_enemies * 2
@@ -210,18 +281,21 @@ func show_result(result: String) -> void:
 
 	# --- Build the debrief panel ---
 	close_debrief()
+	_debrief_memorial_labels = []
+	_debrief_memorial_index = 0
+	_debrief_memorial_timer = 0.0
 	_debrief_panel = PanelContainer.new()
 	_debrief_panel.name = "DebriefPanel"
 
-	# Center on screen, 600 wide x 500 tall
+	# Center on screen, 640 wide x 520 tall (wider for enemy kill list)
 	_debrief_panel.anchor_left = 0.5
 	_debrief_panel.anchor_top = 0.5
 	_debrief_panel.anchor_right = 0.5
 	_debrief_panel.anchor_bottom = 0.5
-	_debrief_panel.offset_left = -300.0
-	_debrief_panel.offset_top = -250.0
-	_debrief_panel.offset_right = 300.0
-	_debrief_panel.offset_bottom = 250.0
+	_debrief_panel.offset_left = -320.0
+	_debrief_panel.offset_top = -260.0
+	_debrief_panel.offset_right = 320.0
+	_debrief_panel.offset_bottom = 260.0
 	_debrief_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	var style := StyleBoxFlat.new()
@@ -319,17 +393,40 @@ func show_result(result: String) -> void:
 
 	_debrief_add_spacer(vbox, 4)
 
-	# --- FORCES section ---
+	# --- ENEMY KILLS section (new in Phase 3) ---
+	if not enemy_kills_this_mission.is_empty():
+		_debrief_add_divider(vbox, "ENEMY DESTROYED")
+		for ek in enemy_kills_this_mission:
+			var ek_lbl := Label.new()
+			var ek_name: String = ek.get("name", "Unknown")
+			var ek_hull: String = ek.get("hull_number", "")
+			var ek_crew: int = ek.get("crew", 0)
+			var display_name: String = ek_name
+			if ek_hull != "":
+				display_name = "%s %s" % [ek_hull, ek_name]
+			var dots_len: int = maxi(1, 38 - display_name.length())
+			var ek_dots: String = " " + ".".repeat(dots_len) + " "
+			ek_lbl.text = "%s%sDESTROYED (%d crew)" % [display_name, ek_dots, ek_crew]
+			ek_lbl.add_theme_font_size_override("font_size", 12)
+			ek_lbl.add_theme_color_override("font_color", Color(0.8, 0.5, 0.3))
+			ek_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			vbox.add_child(ek_lbl)
+		_debrief_add_spacer(vbox, 4)
+
+	# --- FORCES section (real crew counts) ---
 	_debrief_add_divider(vbox, "FORCES")
 
 	for row in force_rows:
 		var row_lbl := Label.new()
-		var dots: String = " "
-		# Pad ship name to ~36 chars with dots
 		var name_str: String = row["name"]
+		var crew_count: int = row.get("crew", 0)
 		var pad_len: int = maxi(1, 38 - name_str.length())
-		dots = " " + ".".repeat(pad_len) + " "
-		var status_str: String = "OK" if row["ok"] else "LOST"
+		var dots: String = " " + ".".repeat(pad_len) + " "
+		var status_str: String
+		if row["ok"]:
+			status_str = "OK"
+		else:
+			status_str = "LOST (%d crew)" % crew_count
 		row_lbl.text = "%s%s%s" % [name_str, dots, status_str]
 		row_lbl.add_theme_font_size_override("font_size", 12)
 		var row_color: Color = Color(0.3, 1.0, 0.3) if row["ok"] else Color(1.0, 0.3, 0.3)
@@ -337,27 +434,24 @@ func show_result(result: String) -> void:
 		row_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		vbox.add_child(row_lbl)
 
-	# --- Prior campaign losses ---
+	# --- Campaign-persistent grief: ALL prior losses with mission name ---
 	if _campaign_mission > 0 and CampaignManager.campaign_active:
-		var prior_lost: Array = CampaignManager.get_lost_ships()
-		# Filter to ships lost in missions BEFORE this one
-		var prior_only: Array = []
-		for ship in prior_lost:
-			if ship.get("lost_mission", _campaign_mission) < _campaign_mission:
-				prior_only.append(ship)
-		if not prior_only.is_empty():
+		var prior_lost: Array = CampaignManager.get_ships_lost_prior()
+		if not prior_lost.is_empty():
 			_debrief_add_spacer(vbox, 2)
 			var prior_hdr := Label.new()
-			prior_hdr.text = "Fleet losses to date:"
+			prior_hdr.text = "CAMPAIGN LOSSES TO DATE:"
 			prior_hdr.add_theme_font_size_override("font_size", 11)
 			prior_hdr.add_theme_color_override("font_color", Color(0.5, 0.3, 0.3))
 			prior_hdr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			vbox.add_child(prior_hdr)
-			for ship in prior_only:
+			for ship in prior_lost:
 				var sl := Label.new()
 				var sname: String = ship.get("name", "Unknown")
 				var lost_at: int = ship.get("lost_mission", 0) + 1
-				sl.text = "  %s — lost mission %d" % [sname, lost_at]
+				var lost_name: String = ship.get("lost_mission_name", "Mission %d" % lost_at)
+				var ship_crew: int = ship.get("crew", 0)
+				sl.text = "  %s — lost Mission %d, %s. %d crew." % [sname, lost_at, lost_name, ship_crew]
 				sl.add_theme_font_size_override("font_size", 11)
 				sl.add_theme_color_override("font_color", Color(0.55, 0.35, 0.35))
 				sl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -365,10 +459,52 @@ func show_result(result: String) -> void:
 
 	_debrief_add_spacer(vbox, 4)
 
+	# --- CREW MEMORIAL section (scrolling names for ships lost this mission) ---
+	if not lost_this_mission.is_empty() and CampaignManager.campaign_active:
+		for lost_ship in lost_this_mission:
+			var ship_id: String = lost_ship.get("ship_id", "")
+			var ship_name: String = lost_ship.get("name", "Unknown")
+			var crew_manifest: Array = CampaignManager.get_crew_manifest(ship_id)
+			if crew_manifest.is_empty():
+				continue
+
+			_debrief_add_divider(vbox, "%s — CREW MANIFEST" % ship_name.to_upper())
+
+			# Show up to 40 names in the memorial (representative sample for large crews)
+			var display_count: int = mini(crew_manifest.size(), 40)
+			for i in range(display_count):
+				var name_lbl := Label.new()
+				name_lbl.text = "  %s" % crew_manifest[i]
+				name_lbl.add_theme_font_size_override("font_size", 10)
+				name_lbl.add_theme_color_override("font_color", Color(0.45, 0.35, 0.35))
+				name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				name_lbl.visible = false  # Hidden initially, revealed by memorial timer
+				vbox.add_child(name_lbl)
+				_debrief_memorial_labels.append(name_lbl)
+
+			if crew_manifest.size() > 40:
+				var more_lbl := Label.new()
+				more_lbl.text = "  ... and %d more" % (crew_manifest.size() - 40)
+				more_lbl.add_theme_font_size_override("font_size", 10)
+				more_lbl.add_theme_color_override("font_color", Color(0.4, 0.3, 0.3))
+				more_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				more_lbl.visible = false
+				vbox.add_child(more_lbl)
+				_debrief_memorial_labels.append(more_lbl)
+
+		# Start memorial scroll after 1 second
+		_debrief_memorial_timer = 1.0
+		_debrief_add_spacer(vbox, 4)
+
 	# --- SITUATION REPORT section ---
 	_debrief_add_divider(vbox, "SITUATION REPORT")
 
-	var narrative: String = _generate_debrief_narrative(result, grade, kills, losses, total_enemies, lost_this_mission)
+	# Build lost_names array for narrative generator (backward compat format)
+	var lost_names_for_narrative: Array = []
+	for lt in lost_this_mission:
+		lost_names_for_narrative.append("%s (%d crew)" % [lt.get("name", "Unknown"), lt.get("crew", 0)])
+
+	var narrative: String = _generate_debrief_narrative(result, grade, kills, losses, total_enemies, lost_names_for_narrative)
 	var narr_lbl := Label.new()
 	narr_lbl.text = narrative
 	narr_lbl.add_theme_font_size_override("font_size", 12)
@@ -379,15 +515,17 @@ func show_result(result: String) -> void:
 
 	_debrief_add_spacer(vbox, 8)
 
-	# --- Continue hint ---
+	# --- Continue hint (3-SECOND DELAY before appearing) ---
 	var hint_text: String = "[ SPACE to continue to next mission ]" if _campaign_mission > 0 else "[ SPACE to restart ]"
-	var hint_lbl := Label.new()
-	hint_lbl.text = hint_text
-	hint_lbl.add_theme_font_size_override("font_size", 12)
-	hint_lbl.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
-	hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	vbox.add_child(hint_lbl)
+	_debrief_continue_hint = Label.new()
+	_debrief_continue_hint.text = hint_text
+	_debrief_continue_hint.add_theme_font_size_override("font_size", 12)
+	_debrief_continue_hint.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	_debrief_continue_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_debrief_continue_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_debrief_continue_hint.visible = false  # Hidden for 3 seconds
+	vbox.add_child(_debrief_continue_hint)
+	_debrief_continue_timer = 3.0  # 3-second delay
 
 	add_child(_debrief_panel)
 
@@ -453,6 +591,11 @@ func close_debrief() -> void:
 	if _debrief_panel:
 		_debrief_panel.queue_free()
 		_debrief_panel = null
+	_debrief_continue_hint = null
+	_debrief_continue_timer = 0.0
+	_debrief_memorial_labels = []
+	_debrief_memorial_index = 0
+	_debrief_memorial_timer = 0.0
 
 
 ## Returns true if the debrief panel is currently shown.
@@ -596,15 +739,37 @@ func show_campaign_complete(history: Array) -> void:
 
 	_debrief_add_spacer(vbox, 4)
 
-	# --- Fleet casualties ---
+	# --- Enemy kills across the campaign ---
+	var all_enemy_kills: Array = CampaignManager.get_all_enemy_kills()
+	if not all_enemy_kills.is_empty():
+		_debrief_add_divider(vbox, "ENEMY DESTROYED")
+		for ek in all_enemy_kills:
+			var ek_lbl := Label.new()
+			var ek_name: String = ek.get("name", "Unknown")
+			var ek_hull: String = ek.get("hull_number", "")
+			var ek_crew: int = ek.get("crew", 0)
+			var ek_mission: String = ek.get("mission_name", "")
+			var display_name: String = ek_name
+			if ek_hull != "":
+				display_name = "%s %s" % [ek_hull, ek_name]
+			ek_lbl.text = "  %s ........ DESTROYED (%d crew) — %s" % [display_name, ek_crew, ek_mission]
+			ek_lbl.add_theme_font_size_override("font_size", 11)
+			ek_lbl.add_theme_color_override("font_color", Color(0.8, 0.5, 0.3))
+			ek_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			vbox.add_child(ek_lbl)
+		_debrief_add_spacer(vbox, 4)
+
+	# --- Fleet casualties with real crew counts ---
 	var lost_ships: Array = CampaignManager.get_lost_ships()
 	if not lost_ships.is_empty():
 		_debrief_add_divider(vbox, "FLEET CASUALTIES")
 		for ship in lost_ships:
 			var sname: String = ship.get("name", "Unknown")
 			var lost_at: int = ship.get("lost_mission", 0) + 1
+			var lost_name: String = ship.get("lost_mission_name", "Mission %d" % lost_at)
+			var ship_crew: int = ship.get("crew", 0)
 			var cas_lbl := Label.new()
-			cas_lbl.text = "  %s — lost mission %d" % [sname, lost_at]
+			cas_lbl.text = "  %s — lost Mission %d, %s. %d crew." % [sname, lost_at, lost_name, ship_crew]
 			cas_lbl.add_theme_font_size_override("font_size", 12)
 			cas_lbl.add_theme_color_override("font_color", Color(0.7, 0.35, 0.35))
 			cas_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -625,13 +790,16 @@ func show_campaign_complete(history: Array) -> void:
 
 	_debrief_add_spacer(vbox, 8)
 
-	var hint_lbl := Label.new()
-	hint_lbl.text = "[ SPACE to return to mission select ]"
-	hint_lbl.add_theme_font_size_override("font_size", 12)
-	hint_lbl.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
-	hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	vbox.add_child(hint_lbl)
+	# Continue hint with 3-second delay
+	_debrief_continue_hint = Label.new()
+	_debrief_continue_hint.text = "[ SPACE to return to mission select ]"
+	_debrief_continue_hint.add_theme_font_size_override("font_size", 12)
+	_debrief_continue_hint.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	_debrief_continue_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_debrief_continue_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_debrief_continue_hint.visible = false
+	vbox.add_child(_debrief_continue_hint)
+	_debrief_continue_timer = 3.0
 
 	add_child(_debrief_panel)
 
@@ -781,11 +949,53 @@ func update_selected_unit(u: Dictionary) -> void:
 			sensor_text += "  RADAR: ON\n"
 		else:
 			sensor_text += "  RADAR: OFF\n"
-		if u.get("emitting_sonar_active", false):
-			sensor_text += "  SONAR: ACTIVE\n"
-		else:
-			sensor_text += "  SONAR: PASSIVE\n"
+		# Phase 5: active sonar mode display
+		var sonar_mode: int = u.get("active_sonar_mode", 0)
+		var sonar_mode_names := {0: "PASSIVE", 1: "QUIET", 2: "FULL POWER"}
+		sensor_text += "  SONAR: %s\n" % sonar_mode_names.get(sonar_mode, "PASSIVE")
+		# Phase 5: EMCON state display
+		var emcon_state: int = u.get("emcon_state", 2)
+		var emcon_names := {0: "ALPHA (SILENT)", 1: "BRAVO (NAV ONLY)", 2: "CHARLIE (NORMAL)", 3: "DELTA (FULL)"}
+		sensor_text += "  EMCON: %s (E to cycle)\n" % emcon_names.get(emcon_state, "???")
+		# Phase 10: ROE state display
+		if SimulationWorld.get("_roe_system"):
+			var roe_state: int = SimulationWorld._roe_system.current_roe
+			var roe_names := {0: "WEAPONS TIGHT", 1: "WEAPONS HOLD", 2: "WEAPONS FREE"}
+			sensor_text += "  ROE: %s\n" % roe_names.get(roe_state, "???")
+		# Phase 8: wire guidance status
+		if SimulationWorld._weapon_system.is_unit_on_wire(u.get("id", "")):
+			sensor_text += "  WIRE GUIDANCE ACTIVE -- SPD LIM 10KT\n"
+		# Phase 8: countermeasure status (NIXIE / noisemaker)
+		var unit_id_str: String = u.get("id", "")
+		if SimulationWorld._weapon_system.is_nixie_deployed(unit_id_str):
+			sensor_text += "  NIXIE: DEPLOYED\n"
+		elif u.get("platform", {}).get("has_decoy", false) and u.get("platform", {}).get("type", "") != "SSN":
+			sensor_text += "  NIXIE: STOWED (X to deploy)\n"
+		if SimulationWorld._weapon_system.is_noisemaker_active(unit_id_str):
+			sensor_text += "  NOISEMAKER: ACTIVE\n"
+		elif u.get("platform", {}).get("type", "") == "SSN":
+			var cm_state: Dictionary = SimulationWorld._weapon_system.get_countermeasure_state(unit_id_str)
+			var nm_rem: int = cm_state.get("noisemakers_remaining", 0)
+			if nm_rem > 0:
+				sensor_text += "  NOISEMAKER: %d remaining (X to launch)\n" % nm_rem
 		sensors_label.text = sensor_text.strip_edges()
+
+	# XBT count for surface ships
+	var xbt_remaining: int = u.get("xbt_remaining", 0)
+	if xbt_remaining > 0:
+		if sensors_label:
+			sensors_label.text += "\n  XBT: %d remaining (T to drop)" % xbt_remaining
+	elif u.get("xbt_remaining", -1) == 0 and u.get("platform", {}).get("xbt_count", 0) > 0:
+		if sensors_label:
+			sensors_label.text += "\n  XBT: NONE"
+
+	# Sonobuoy inventory for airborne ASW aircraft (Phase 7)
+	var difar_rem: int = u.get("sonobuoys_difar", 0)
+	var dicass_rem: int = u.get("sonobuoys_dicass", 0)
+	var total_buoys: int = u.get("sonobuoys_remaining", 0)
+	if total_buoys > 0 or difar_rem > 0 or dicass_rem > 0:
+		if sensors_label:
+			sensors_label.text += "\n  BUOYS: %d DIFAR / %d DICASS (B/N to drop)" % [difar_rem, dicass_rem]
 
 	# Helicopter status for ships that carry them
 	var platform: Dictionary = u.get("platform", {})
@@ -831,6 +1041,14 @@ func _refresh_contacts() -> void:
 			var det: Dictionary = all_contacts[tid]
 			var classification: Dictionary = det.get("classification", {})
 			var designator: String = classification.get("designator", "UNKNOWN")
+			# Phase 8: kill status prefix
+			var kill_status: String = ""
+			if tid in SimulationWorld.units:
+				var ks: String = SimulationWorld.units[tid].get("kill_status", "none")
+				if ks == "probable":
+					kill_status = "[PROB KILL] "
+				elif ks == "confirmed":
+					kill_status = "[DESTROYED] "
 			var conf_pct: int = int(det.get("confidence", 0.0) * 100)
 			var bearing: int = int(det.get("bearing", 0.0))
 			var method: String = det.get("method", "?")
@@ -841,12 +1059,16 @@ func _refresh_contacts() -> void:
 					method_abbr = "PSV"
 				"sonar_active":
 					method_abbr = "ACT"
+				"sonar_cz":
+					method_abbr = "C/Z"
 				"radar":
 					method_abbr = "RAD"
 				"esm":
 					method_abbr = "ESM"
 				"sonar_intercept":
 					method_abbr = "INT"
+				"sonobuoy":
+					method_abbr = "BUY"
 				_:
 					method_abbr = method.substr(0, 3).to_upper()
 			# Item 11: cap reporter name to 4 chars
@@ -854,14 +1076,37 @@ func _refresh_contacts() -> void:
 			# EN-3: include range estimate (or bearing-only if no range fix)
 			var range_est: float = det.get("range_est", 0.0)
 			var is_bearing_only: bool = det.get("bearing_only", false)
-			var tma_progress: float = det.get("tma_progress", 0.0)
+			var tma_quality: float = det.get("tma_quality", 0.0)
+			var tma_state: int = det.get("tma_state", 0)
 			if is_bearing_only:
-				if tma_progress > 0.0:
-					lines.append("%s %s %03d BRG ONLY %s %d%% TMA:%d%%" % [reporter, designator, bearing, method_abbr, conf_pct, int(tma_progress * 100)])
+				# CZ detection: has a rough range band even though bearing-only
+				var is_cz: bool = det.get("cz_detection", false)
+				if is_cz:
+					var cz_band: float = det.get("cz_range_band", 33.0)
+					var cz_label: String = "CZ1" if cz_band < 50.0 else "CZ2"
+					lines.append("%s%s %s %03d %s ~%dNM %s %d%%" % [kill_status, reporter, designator, bearing, cz_label, int(cz_band), method_abbr, conf_pct])
 				else:
-					lines.append("%s %s %03d BRG ONLY %s %d%%" % [reporter, designator, bearing, method_abbr, conf_pct])
+					# TMA state labels: 0=NO_CONTACT, 1=DETECTING, 2=TRACKING, 3=SOLUTION
+					var tma_state_str: String
+					match tma_state:
+						1: tma_state_str = "DET"
+						2: tma_state_str = "TRK"
+						3: tma_state_str = "SOL"
+						_: tma_state_str = "---"
+					if tma_quality > 0.0:
+						var tma_range_str: String = ""
+						var tma_est_range: float = det.get("tma_estimated_range", 0.0)
+						if tma_quality >= 0.5 and tma_est_range > 0.0:
+							tma_range_str = " ~%dNM" % int(tma_est_range)
+						lines.append("%s%s %s %03d BRG %s %s %d%% Q:%d%%%s" % [kill_status, reporter, designator, bearing, tma_state_str, method_abbr, conf_pct, int(tma_quality * 100), tma_range_str])
+					else:
+						lines.append("%s%s %s %03d BRG ONLY %s %d%%" % [kill_status, reporter, designator, bearing, method_abbr, conf_pct])
 			else:
-				lines.append("%s %s %03d ~%dNM %s %d%%" % [reporter, designator, bearing, int(range_est), method_abbr, conf_pct])
+				# Ranged contact (radar, active sonar, or TMA solution >= 0.7)
+				var quality_suffix: String = ""
+				if tma_quality >= 0.7:
+					quality_suffix = " TMA:SOL"
+				lines.append("%s%s %s %03d ~%dNM %s %d%%%s" % [kill_status, reporter, designator, bearing, int(range_est), method_abbr, conf_pct, quality_suffix])
 
 	# Fix 14: update existing label nodes in-place; add/remove only as needed
 	var existing: Array = contacts_list.get_children()
@@ -904,7 +1149,7 @@ func toggle_help() -> void:
 	_help_expanded = not _help_expanded
 	if help_label:
 		if _help_expanded:
-			help_label.text = "LClick: Select / Designate | RClick: Waypoint\nF: Fire | C: Cycle Weapon | Tab: Cycle Units\nW/X: Speed +/- | [/]: Depth (subs)\nR: Radar | S: Sonar | L: Launch Helo\nH: Center Camera | +/-: Zoom | Arrows: Pan\nSPACE: Pause | 1-5: Time Scale | Esc: Menu\nV: Toggle CRT Mode | M: Toggle Minimap"
+			help_label.text = "LClick: Select / Designate | RClick: Waypoint\nF: Fire | C: Cycle Weapon | Tab: Cycle Units\nW/X: Speed +/- | [/]: Depth (subs)\nR: Radar | S: Sonar Mode (OFF/QUIET/FULL) | E: EMCON State\nL: Launch Helo | T: Drop XBT\nB: DIFAR (passive) | N: DICASS (active)\nH: Center Camera | +/-: Zoom | Arrows: Pan\nSPACE: Pause | 1-5: Time Scale | Esc: Menu\nV: Toggle CRT Mode | M: Tactical Plot\nF5: Save | F9: Load"
 		else:
 			help_label.text = "F1 — Controls"
 
